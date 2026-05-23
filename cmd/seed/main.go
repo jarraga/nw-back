@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 
-	"nw-back/postgres"
+	"nw-back/internal/postgres"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/joho/godotenv"
 )
 
@@ -25,22 +25,6 @@ func main() {
 	log.Println("postgres connection OK")
 	defer postgres.Close()
 
-	router := NewRouter()
-
-	addr := ":" + envPort()
-	log.Printf("northwind backend listening on %s", addr)
-
-	err = http.ListenAndServe(addr, router)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func envPort() string {
-	value := os.Getenv("PORT")
-	if value == "" {
-		return "8080"
-	}
-
-	return value
+	gofakeit.Seed(0)
+	log.Println("seed data generator ready")
 }

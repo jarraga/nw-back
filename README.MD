@@ -1,6 +1,6 @@
 # nw-back
 
-Backend en Go para Northwind. Usa Chi para las rutas, pgx para conectarse a PostgreSQL y sqlc para generar codigo Go a partir de SQL.
+Backend en Go para Northwind. Usa Chi para las rutas, pgx para conectarse a PostgreSQL, sqlc para generar codigo Go a partir de SQL y gofakeit para generar datos fake.
 
 ## Requisitos
 
@@ -62,7 +62,7 @@ El archivo `.env` esta ignorado por git.
 Antes de iniciar el servidor HTTP, la aplicacion intenta conectarse a PostgreSQL. Si la conexion falla, se loguea el error y el proceso termina.
 
 ```powershell
-go run .
+go run ./cmd/api
 ```
 
 Endpoint disponible:
@@ -80,12 +80,32 @@ Respuesta esperada:
 }
 ```
 
-## Estructura de Postgres
+## Generar datos fake
 
-La carpeta `postgres` concentra lo relacionado con la base de datos:
+El comando de seed vive en `cmd/seed`. Ahi va todo lo relacionado con generacion de datos fake y carga inicial en la base de datos.
+
+```powershell
+go run ./cmd/seed
+```
+
+## Estructura del proyecto
 
 ```text
-postgres/
+cmd/
+  api/             Entrada principal de la API HTTP
+  seed/            Entrada para generar y cargar datos fake
+internal/
+  handlers/        Handlers HTTP
+  routes/          Definicion de rutas
+  postgres/        Conexion, schema, queries y codigo generado de Postgres
+```
+
+## Estructura de Postgres
+
+La carpeta `internal/postgres` concentra lo relacionado con la base de datos:
+
+```text
+internal/postgres/
   postgres.go      Conexion global con pgx
   schema/          Archivos SQL con estructura de tablas
   queries/         Consultas SQL usadas por sqlc
@@ -101,9 +121,9 @@ postgres.DB
 
 El archivo `sqlc.yaml` ya apunta a:
 
-- `postgres/schema` para schemas
-- `postgres/queries` para queries
-- `postgres/db` como salida del codigo generado
+- `internal/postgres/schema` para schemas
+- `internal/postgres/queries` para queries
+- `internal/postgres/db` como salida del codigo generado
 
 Cuando existan archivos SQL en `schema` y `queries`, generar el codigo con:
 

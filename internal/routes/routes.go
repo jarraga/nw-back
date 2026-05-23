@@ -1,9 +1,9 @@
-package main
+package routes
 
 import (
 	"net/http"
 
-	"nw-back/handlers"
+	"nw-back/internal/handlers"
 
 	"github.com/go-chi/chi/v5"
 )
