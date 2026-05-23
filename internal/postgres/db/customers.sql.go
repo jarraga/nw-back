@@ -7,7 +7,62 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createCustomer = `-- name: CreateCustomer :one
+INSERT INTO customers (
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5
+)
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  created_at
+`
+
+type CreateCustomerParams struct {
+	CompanyName string
+	CompanyType CompanyType
+	Phone       string
+	Email       string
+	MonthlyFee  pgtype.Numeric
+}
+
+func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, createCustomer,
+		arg.CompanyName,
+		arg.CompanyType,
+		arg.Phone,
+		arg.Email,
+		arg.MonthlyFee,
+	)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.CreatedAt,
+	)
+	return i, err
+}
 
 const listCustomers = `-- name: ListCustomers :many
 SELECT
