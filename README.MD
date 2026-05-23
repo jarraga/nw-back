@@ -7,6 +7,13 @@ Backend en Go para Northwind. Usa Chi para las rutas, pgx para conectarse a Post
 - Go instalado
 - PostgreSQL corriendo localmente
 - sqlc instalado como herramienta de desarrollo
+- make instalado para usar los comandos del `Makefile`
+
+En Windows se puede instalar make con:
+
+```powershell
+winget install GnuWin32.Make
+```
 
 ## Instalar dependencias del proyecto
 
@@ -62,7 +69,7 @@ El archivo `.env` esta ignorado por git.
 Antes de iniciar el servidor HTTP, la aplicacion intenta conectarse a PostgreSQL. Si la conexion falla, se loguea el error y el proceso termina.
 
 ```powershell
-go run ./cmd/api
+make dev
 ```
 
 Endpoint disponible:
@@ -85,7 +92,7 @@ Respuesta esperada:
 El comando de seed vive en `cmd/seed`. Ahi va todo lo relacionado con generacion de datos fake y carga inicial en la base de datos.
 
 ```powershell
-go run ./cmd/seed
+make seed
 ```
 
 ## Estructura del proyecto
@@ -128,7 +135,7 @@ El archivo `sqlc.yaml` ya apunta a:
 Cuando existan archivos SQL en `schema` y `queries`, generar el codigo con:
 
 ```powershell
-sqlc generate
+make gen
 ```
 
 ## Verificar el proyecto

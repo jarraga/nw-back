@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"nw-back/internal/postgres"
+	"nw-back/internal/postgres/db"
 	"nw-back/internal/routes"
 
 	"github.com/joho/godotenv"
@@ -26,7 +27,8 @@ func main() {
 	log.Println("postgres connection OK")
 	defer postgres.Close()
 
-	router := routes.NewRouter()
+	queries := db.New(postgres.DB)
+	router := routes.NewRouter(queries)
 
 	addr := ":" + envPort()
 	log.Printf("northwind backend listening on %s", addr)
