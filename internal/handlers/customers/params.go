@@ -16,6 +16,10 @@ type listParams struct {
 	offset int
 }
 
+type debtParams struct {
+	dueDay int
+}
+
 func parseListParams(r *http.Request) (listParams, error) {
 	limit, err := queryInt(r, "limit", defaultLimit)
 	if err != nil {
@@ -34,6 +38,21 @@ func parseListParams(r *http.Request) (listParams, error) {
 	return listParams{
 		limit:  limit,
 		offset: offset,
+	}, nil
+}
+
+func parseDebtParams(r *http.Request) (debtParams, error) {
+	dueDay, err := queryInt(r, "dueDay", 10)
+	if err != nil {
+		return debtParams{}, err
+	}
+
+	if dueDay < 1 || dueDay > 31 {
+		return debtParams{}, fmt.Errorf("dueDay must be between 1 and 31")
+	}
+
+	return debtParams{
+		dueDay: dueDay,
 	}, nil
 }
 

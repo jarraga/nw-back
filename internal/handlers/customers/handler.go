@@ -46,3 +46,32 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) Debt(w http.ResponseWriter, r *http.Request) {
+	params, err := parseDebtParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	totalDebt, err := h.queries.GetTotalCustomerDebt(r.Context(), int32(params.dueDay))
+	if err != nil {
+		http.Error(w, "failed to calculate customer debt", http.StatusInternalServerError)
+		return
+	}
+
+	value, err := totalDebt.Float64Value()
+	if err != nil {
+		http.Error(w, "failed to build customer debt response", http.StatusInternalServerError)
+		return
+	}
+
+	response := newDebtResponse(value.Float64)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}

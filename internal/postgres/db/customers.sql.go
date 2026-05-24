@@ -17,13 +17,15 @@ INSERT INTO customers (
   company_type,
   phone,
   email,
-  monthly_fee
+  monthly_fee,
+  billing_started_at
 ) VALUES (
   $1,
   $2,
   $3,
   $4,
-  $5
+  $5,
+  $6
 )
 RETURNING
   id,
@@ -32,15 +34,17 @@ RETURNING
   phone,
   email,
   monthly_fee,
+  billing_started_at,
   created_at
 `
 
 type CreateCustomerParams struct {
-	CompanyName string
-	CompanyType CompanyType
-	Phone       string
-	Email       string
-	MonthlyFee  pgtype.Numeric
+	CompanyName      string
+	CompanyType      CompanyType
+	Phone            string
+	Email            string
+	MonthlyFee       pgtype.Numeric
+	BillingStartedAt pgtype.Date
 }
 
 func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
@@ -50,6 +54,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		arg.Phone,
 		arg.Email,
 		arg.MonthlyFee,
+		arg.BillingStartedAt,
 	)
 	var i Customer
 	err := row.Scan(
@@ -59,6 +64,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.Phone,
 		&i.Email,
 		&i.MonthlyFee,
+		&i.BillingStartedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -72,6 +78,7 @@ SELECT
   phone,
   email,
   monthly_fee,
+  billing_started_at,
   created_at
 FROM customers
 ORDER BY id
@@ -100,6 +107,7 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 			&i.Phone,
 			&i.Email,
 			&i.MonthlyFee,
+			&i.BillingStartedAt,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

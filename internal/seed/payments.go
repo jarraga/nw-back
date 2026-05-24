@@ -16,7 +16,7 @@ func createCustomerPayments(ctx context.Context, queries *db.Queries, customers 
 	paymentsCreated := 0
 
 	for _, customer := range customers {
-		dataFrom := randomDataFromMonth(config, dataTo)
+		dataFrom := customer.BillingStartedAt.Time
 		payments, err := randomPayments(customer, dataFrom, dataTo, config)
 		if err != nil {
 			return err
@@ -100,25 +100,7 @@ func randomPaidAt(companyType db.CompanyType, month time.Time, lastPaidAt time.T
 	return paidAt
 }
 
-func randomDataFromMonth(config Config, dataTo time.Time) time.Time {
-	firstMonth := time.Date(config.DataFromYear, time.January, 1, 0, 0, 0, 0, time.UTC)
-	monthsRange := config.CustomerStartVariationMonths
-	maxMonthsRange := monthsBetween(firstMonth, dataTo)
-
-	if monthsRange > maxMonthsRange {
-		monthsRange = maxMonthsRange
-	}
-
-	randomMonths := gofakeit.Number(0, monthsRange)
-
-	return firstMonth.AddDate(0, randomMonths, 0)
-}
-
 func dataToMonth() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-}
-
-func monthsBetween(from time.Time, to time.Time) int {
-	return (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month())
 }

@@ -6,6 +6,7 @@ SELECT
   phone,
   email,
   monthly_fee,
+  billing_started_at,
   created_at
 FROM customers
 ORDER BY id
@@ -18,13 +19,15 @@ INSERT INTO customers (
   company_type,
   phone,
   email,
-  monthly_fee
+  monthly_fee,
+  billing_started_at
 ) VALUES (
   sqlc.arg('company_name'),
   sqlc.arg('company_type'),
   sqlc.arg('phone'),
   sqlc.arg('email'),
-  sqlc.arg('monthly_fee')
+  sqlc.arg('monthly_fee'),
+  sqlc.arg('billing_started_at')
 )
 RETURNING
   id,
@@ -33,4 +36,5 @@ RETURNING
   phone,
   email,
   monthly_fee,
+  billing_started_at,
   created_at;

@@ -97,13 +97,14 @@ func (ns NullPaymentStatus) Value() (driver.Value, error) {
 }
 
 type Customer struct {
-	ID          int64
-	CompanyName string
-	CompanyType CompanyType
-	Phone       string
-	Email       string
-	MonthlyFee  pgtype.Numeric
-	CreatedAt   pgtype.Timestamptz
+	ID               int64
+	CompanyName      string
+	CompanyType      CompanyType
+	Phone            string
+	Email            string
+	MonthlyFee       pgtype.Numeric
+	BillingStartedAt pgtype.Date
+	CreatedAt        pgtype.Timestamptz
 }
 
 type CustomerPayment struct {

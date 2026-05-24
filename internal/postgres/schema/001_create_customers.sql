@@ -11,5 +11,6 @@ CREATE TABLE customers (
   phone TEXT NOT NULL,
   email TEXT NOT NULL,
   monthly_fee NUMERIC(12, 2) NOT NULL,
+  billing_started_at DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

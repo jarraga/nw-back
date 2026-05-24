@@ -7,13 +7,18 @@ import (
 )
 
 type response struct {
-	ID          int64          `json:"id"`
-	CompanyName string         `json:"companyName"`
-	CompanyType db.CompanyType `json:"companyType"`
-	Phone       string         `json:"phone"`
-	Email       string         `json:"email"`
-	MonthlyFee  float64        `json:"monthlyFee"`
-	CreatedAt   time.Time      `json:"createdAt"`
+	ID               int64          `json:"id"`
+	CompanyName      string         `json:"companyName"`
+	CompanyType      db.CompanyType `json:"companyType"`
+	Phone            string         `json:"phone"`
+	Email            string         `json:"email"`
+	MonthlyFee       float64        `json:"monthlyFee"`
+	BillingStartedAt time.Time      `json:"billingStartedAt"`
+	CreatedAt        time.Time      `json:"createdAt"`
+}
+
+type debtResponse struct {
+	TotalDebt float64 `json:"totalDebt"`
 }
 
 func newListResponse(customers []db.Customer) ([]response, error) {
@@ -26,15 +31,22 @@ func newListResponse(customers []db.Customer) ([]response, error) {
 		}
 
 		items = append(items, response{
-			ID:          customer.ID,
-			CompanyName: customer.CompanyName,
-			CompanyType: customer.CompanyType,
-			Phone:       customer.Phone,
-			Email:       customer.Email,
-			MonthlyFee:  monthlyFee.Float64,
-			CreatedAt:   customer.CreatedAt.Time,
+			ID:               customer.ID,
+			CompanyName:      customer.CompanyName,
+			CompanyType:      customer.CompanyType,
+			Phone:            customer.Phone,
+			Email:            customer.Email,
+			MonthlyFee:       monthlyFee.Float64,
+			BillingStartedAt: customer.BillingStartedAt.Time,
+			CreatedAt:        customer.CreatedAt.Time,
 		})
 	}
 
 	return items, nil
+}
+
+func newDebtResponse(totalDebt float64) debtResponse {
+	return debtResponse{
+		TotalDebt: totalDebt,
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"nw-back/internal/postgres"
 	"nw-back/internal/postgres/db"
@@ -12,12 +13,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-var companyTypes = []db.CompanyType{
-	db.CompanyTypeEnterprise,
-	db.CompanyTypePyme,
-	db.CompanyTypeStartup,
-}
 
 func Run(ctx context.Context) error {
 	err := postgres.Connect(ctx)
@@ -78,18 +73,31 @@ func randomCustomer(config Config) (db.CreateCustomerParams, error) {
 		return db.CreateCustomerParams{}, err
 	}
 
+	billingStartedAt := randomBillingStartedAt(config)
+
 	return db.CreateCustomerParams{
-		CompanyName: gofakeit.Company(),
-		CompanyType: randomCompanyType(),
-		Phone:       gofakeit.Phone(),
-		Email:       gofakeit.Email(),
-		MonthlyFee:  monthlyFee,
+		CompanyName:      gofakeit.Company(),
+		CompanyType:      randomCompanyType(config),
+		Phone:            gofakeit.Phone(),
+		Email:            gofakeit.Email(),
+		MonthlyFee:       monthlyFee,
+		BillingStartedAt: billingStartedAt,
 	}, nil
 }
 
-func randomCompanyType() db.CompanyType {
-	index := gofakeit.Number(0, len(companyTypes)-1)
-	return companyTypes[index]
+func randomCompanyType(config Config) db.CompanyType {
+	totalWeight := config.EnterpriseCompanyWeight + config.PymeCompanyWeight + config.StartupCompanyWeight
+	randomWeight := gofakeit.Number(1, totalWeight)
+
+	if randomWeight <= config.EnterpriseCompanyWeight {
+		return db.CompanyTypeEnterprise
+	}
+
+	if randomWeight <= config.EnterpriseCompanyWeight+config.PymeCompanyWeight {
+		return db.CompanyTypePyme
+	}
+
+	return db.CompanyTypeStartup
 }
 
 func randomMonthlyFee(config Config) (pgtype.Numeric, error) {
@@ -103,4 +111,14 @@ func randomMonthlyFee(config Config) (pgtype.Numeric, error) {
 	}
 
 	return monthlyFee, nil
+}
+
+func randomBillingStartedAt(config Config) pgtype.Date {
+	firstMonth := time.Date(config.DataFromYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+	randomMonths := gofakeit.Number(0, config.CustomerStartVariationMonths)
+
+	return pgtype.Date{
+		Time:  firstMonth.AddDate(0, randomMonths, 0),
+		Valid: true,
+	}
 }
