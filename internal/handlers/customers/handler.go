@@ -75,3 +75,37 @@ func (h *Handler) Debt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) DebtList(w http.ResponseWriter, r *http.Request) {
+	params, err := parseDebtListParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	customers, err := h.queries.ListCustomersDebt(r.Context(), db.ListCustomersDebtParams{
+		DueDay:        int32(params.dueDay),
+		SortBy:        params.sortBy,
+		SortDirection: params.sortDirection,
+		Limit:         int32(params.limit),
+		Offset:        int32(params.offset),
+		CompanyTypes:  params.companyTypes,
+	})
+	if err != nil {
+		http.Error(w, "failed to list customers debt", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newDebtListResponse(customers)
+	if err != nil {
+		http.Error(w, "failed to build customers debt response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}

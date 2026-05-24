@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -18,6 +19,15 @@ type listParams struct {
 
 type debtParams struct {
 	dueDay int
+}
+
+type debtListParams struct {
+	dueDay        int
+	sortBy        string
+	sortDirection string
+	companyTypes  []string
+	limit         int
+	offset        int
 }
 
 func parseListParams(r *http.Request) (listParams, error) {
@@ -54,6 +64,72 @@ func parseDebtParams(r *http.Request) (debtParams, error) {
 	return debtParams{
 		dueDay: dueDay,
 	}, nil
+}
+
+func parseDebtListParams(r *http.Request) (debtListParams, error) {
+	debt, err := parseDebtParams(r)
+	if err != nil {
+		return debtListParams{}, err
+	}
+
+	sortBy := r.URL.Query().Get("sortBy")
+	if sortBy == "" {
+		sortBy = "amount"
+	}
+
+	if sortBy != "amount" && sortBy != "months" {
+		return debtListParams{}, fmt.Errorf("sortBy must be amount or months")
+	}
+
+	sortDirection := r.URL.Query().Get("sortDirection")
+	if sortDirection == "" {
+		sortDirection = "desc"
+	}
+
+	if sortDirection != "asc" && sortDirection != "desc" {
+		return debtListParams{}, fmt.Errorf("sortDirection must be asc or desc")
+	}
+
+	list, err := parseListParams(r)
+	if err != nil {
+		return debtListParams{}, err
+	}
+
+	companyTypes, err := parseCompanyTypes(r)
+	if err != nil {
+		return debtListParams{}, err
+	}
+
+	return debtListParams{
+		dueDay:        debt.dueDay,
+		sortBy:        sortBy,
+		sortDirection: sortDirection,
+		companyTypes:  companyTypes,
+		limit:         list.limit,
+		offset:        list.offset,
+	}, nil
+}
+
+func parseCompanyTypes(r *http.Request) ([]string, error) {
+	values := r.URL.Query()["companyType"]
+	companyTypes := []string{}
+
+	for _, value := range values {
+		for _, companyType := range strings.Split(value, ",") {
+			companyType = strings.TrimSpace(companyType)
+			if companyType == "" {
+				continue
+			}
+
+			if companyType != "enterprise" && companyType != "pyme" && companyType != "startup" {
+				return nil, fmt.Errorf("companyType must be enterprise, pyme or startup")
+			}
+
+			companyTypes = append(companyTypes, companyType)
+		}
+	}
+
+	return companyTypes, nil
 }
 
 func queryInt(r *http.Request, key string, fallback int) (int, error) {

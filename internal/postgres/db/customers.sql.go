@@ -119,3 +119,126 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 	}
 	return items, nil
 }
+
+const listCustomersDebt = `-- name: ListCustomersDebt :many
+WITH customer_debts AS (
+  SELECT
+    c.id,
+    c.company_name,
+    c.company_type,
+    c.phone,
+    c.email,
+    c.monthly_fee,
+    c.billing_started_at,
+    COUNT(overdue_months.month_date)::int AS overdue_months,
+    COALESCE(SUM(c.monthly_fee), 0)::numeric AS overdue_amount
+  FROM customers c
+  LEFT JOIN LATERAL (
+    SELECT
+      month_date
+    FROM generate_series(
+      date_trunc('month', c.billing_started_at)::date,
+      date_trunc('month', CURRENT_DATE)::date,
+      INTERVAL '1 month'
+    ) AS month_date
+    LEFT JOIN customer_payments cp
+      ON cp.customer_id = c.id
+     AND cp.year = EXTRACT(YEAR FROM month_date)::int
+     AND cp.month = EXTRACT(MONTH FROM month_date)::int
+    WHERE cp.id IS NULL
+      AND (
+        month_date::date +
+        (
+          LEAST(
+            $5::int,
+            EXTRACT(
+              DAY FROM date_trunc('month', month_date)::date + INTERVAL '1 month - 1 day'
+            )::int
+          ) - 1
+        ) * INTERVAL '1 day'
+      )::date < CURRENT_DATE
+  ) overdue_months ON true
+  WHERE cardinality($6::text[]) = 0
+     OR c.company_type::text = ANY($6::text[])
+  GROUP BY c.id
+)
+SELECT
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  overdue_months,
+  overdue_amount
+FROM customer_debts
+ORDER BY
+  CASE WHEN $1::text = 'amount' AND $2::text = 'asc' THEN overdue_amount END ASC,
+  CASE WHEN $1::text = 'amount' AND $2::text = 'desc' THEN overdue_amount END DESC,
+  CASE WHEN $1::text = 'months' AND $2::text = 'asc' THEN overdue_months END ASC,
+  CASE WHEN $1::text = 'months' AND $2::text = 'desc' THEN overdue_months END DESC,
+  overdue_amount DESC,
+  overdue_months DESC,
+  id ASC
+LIMIT $4
+OFFSET $3
+`
+
+type ListCustomersDebtParams struct {
+	SortBy        string
+	SortDirection string
+	Offset        int32
+	Limit         int32
+	DueDay        int32
+	CompanyTypes  []string
+}
+
+type ListCustomersDebtRow struct {
+	ID               int64
+	CompanyName      string
+	CompanyType      CompanyType
+	Phone            string
+	Email            string
+	MonthlyFee       pgtype.Numeric
+	BillingStartedAt pgtype.Date
+	OverdueMonths    int32
+	OverdueAmount    pgtype.Numeric
+}
+
+func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtParams) ([]ListCustomersDebtRow, error) {
+	rows, err := q.db.Query(ctx, listCustomersDebt,
+		arg.SortBy,
+		arg.SortDirection,
+		arg.Offset,
+		arg.Limit,
+		arg.DueDay,
+		arg.CompanyTypes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomersDebtRow
+	for rows.Next() {
+		var i ListCustomersDebtRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyName,
+			&i.CompanyType,
+			&i.Phone,
+			&i.Email,
+			&i.MonthlyFee,
+			&i.BillingStartedAt,
+			&i.OverdueMonths,
+			&i.OverdueAmount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
