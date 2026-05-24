@@ -37,7 +37,12 @@ func Run(ctx context.Context) error {
 
 	queries := db.New(postgres.DB)
 
-	err = createCustomers(ctx, queries, config)
+	customers, err := createCustomers(ctx, queries, config)
+	if err != nil {
+		return err
+	}
+
+	err = createCustomerPayments(ctx, queries, customers, config)
 	if err != nil {
 		return err
 	}
@@ -45,23 +50,26 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func createCustomers(ctx context.Context, queries *db.Queries, config Config) error {
+func createCustomers(ctx context.Context, queries *db.Queries, config Config) ([]db.Customer, error) {
 	gofakeit.Seed(0)
+	customers := make([]db.Customer, 0, config.ActiveCustomers)
 
 	for range config.ActiveCustomers {
 		customer, err := randomCustomer(config)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		_, err = queries.CreateCustomer(ctx, customer)
+		createdCustomer, err := queries.CreateCustomer(ctx, customer)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		customers = append(customers, createdCustomer)
 	}
 
 	log.Printf("%d customers created", config.ActiveCustomers)
-	return nil
+	return customers, nil
 }
 
 func randomCustomer(config Config) (db.CreateCustomerParams, error) {
