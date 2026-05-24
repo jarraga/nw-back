@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const customersAmount = 100
-
 var companyTypes = []db.CompanyType{
 	db.CompanyTypeEnterprise,
 	db.CompanyTypePyme,
@@ -30,9 +28,16 @@ func Run(ctx context.Context) error {
 
 	log.Println("postgres connection OK")
 
+	err = resetDatabase(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Println("database reset OK")
+
 	queries := db.New(postgres.DB)
 
-	err = createCustomers(ctx, queries)
+	err = createCustomers(ctx, queries, config)
 	if err != nil {
 		return err
 	}
@@ -40,11 +45,11 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func createCustomers(ctx context.Context, queries *db.Queries) error {
+func createCustomers(ctx context.Context, queries *db.Queries, config Config) error {
 	gofakeit.Seed(0)
 
-	for range customersAmount {
-		customer, err := randomCustomer()
+	for range config.ActiveCustomers {
+		customer, err := randomCustomer(config)
 		if err != nil {
 			return err
 		}
@@ -55,12 +60,12 @@ func createCustomers(ctx context.Context, queries *db.Queries) error {
 		}
 	}
 
-	log.Printf("%d customers created", customersAmount)
+	log.Printf("%d customers created", config.ActiveCustomers)
 	return nil
 }
 
-func randomCustomer() (db.CreateCustomerParams, error) {
-	monthlyFee, err := randomMonthlyFee()
+func randomCustomer(config Config) (db.CreateCustomerParams, error) {
+	monthlyFee, err := randomMonthlyFee(config)
 	if err != nil {
 		return db.CreateCustomerParams{}, err
 	}
@@ -79,9 +84,9 @@ func randomCompanyType() db.CompanyType {
 	return companyTypes[index]
 }
 
-func randomMonthlyFee() (pgtype.Numeric, error) {
+func randomMonthlyFee(config Config) (pgtype.Numeric, error) {
 	monthlyFee := pgtype.Numeric{}
-	value := gofakeit.Number(200, 15000)
+	value := gofakeit.Number(config.MonthlyFeeFrom, config.MonthlyFeeTo)
 	formattedValue := strconv.Itoa(value)
 
 	err := monthlyFee.Scan(formattedValue)

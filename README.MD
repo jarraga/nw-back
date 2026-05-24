@@ -91,6 +91,12 @@ Respuesta esperada:
 
 El comando de seed vive en `cmd/seed`. Ahi va todo lo relacionado con generacion de datos fake y carga inicial en la base de datos.
 
+La configuracion del seed esta en:
+
+```text
+internal/seed/config.go
+```
+
 ```powershell
 make seed
 ```
