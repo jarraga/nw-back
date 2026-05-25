@@ -64,14 +64,7 @@ func newCreateCustomerParams(request createCustomerRequest) (db.CreateCustomerPa
 	}
 
 	phone := strings.TrimSpace(request.Phone)
-	if phone == "" {
-		return db.CreateCustomerParams{}, fmt.Errorf("phone is required")
-	}
-
 	email := strings.TrimSpace(request.Email)
-	if email == "" {
-		return db.CreateCustomerParams{}, fmt.Errorf("email is required")
-	}
 
 	monthlyFee, err := parseMonthlyFee(request.MonthlyFee)
 	if err != nil {

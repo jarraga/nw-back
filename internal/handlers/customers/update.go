@@ -3,7 +3,6 @@ package customers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -62,14 +61,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 func newUpdateCustomerParams(customerID int64, request updateCustomerRequest) (db.UpdateCustomerContactParams, error) {
 	phone := strings.TrimSpace(request.Phone)
-	if phone == "" {
-		return db.UpdateCustomerContactParams{}, fmt.Errorf("phone is required")
-	}
-
 	email := strings.TrimSpace(request.Email)
-	if email == "" {
-		return db.UpdateCustomerContactParams{}, fmt.Errorf("email is required")
-	}
 
 	monthlyFee, err := parseMonthlyFee(request.MonthlyFee)
 	if err != nil {
