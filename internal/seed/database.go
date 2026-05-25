@@ -27,8 +27,10 @@ func resetDatabase(ctx context.Context) error {
 
 func dropDatabase(ctx context.Context) error {
 	_, err := postgres.DB.Exec(ctx, `
+		DROP TABLE IF EXISTS customer_actions;
 		DROP TABLE IF EXISTS customer_payments;
 		DROP TABLE IF EXISTS customers;
+		DROP TYPE IF EXISTS customer_action_type;
 		DROP TYPE IF EXISTS payment_status;
 		DROP TYPE IF EXISTS company_type;
 	`)

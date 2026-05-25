@@ -54,6 +54,50 @@ func (ns NullCompanyType) Value() (driver.Value, error) {
 	return string(ns.CompanyType), nil
 }
 
+type CustomerActionType string
+
+const (
+	CustomerActionTypeCall          CustomerActionType = "call"
+	CustomerActionTypeEmail         CustomerActionType = "email"
+	CustomerActionTypePersonalVisit CustomerActionType = "personal_visit"
+	CustomerActionTypeOther         CustomerActionType = "other"
+)
+
+func (e *CustomerActionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerActionType(s)
+	case string:
+		*e = CustomerActionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerActionType: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerActionType struct {
+	CustomerActionType CustomerActionType
+	Valid              bool // Valid is true if CustomerActionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerActionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerActionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerActionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerActionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerActionType), nil
+}
+
 type PaymentStatus string
 
 const (
@@ -106,6 +150,15 @@ type Customer struct {
 	BillingStartedAt pgtype.Date
 	Comments         string
 	CreatedAt        pgtype.Timestamptz
+}
+
+type CustomerAction struct {
+	ID         int64
+	CustomerID int64
+	Type       CustomerActionType
+	Comments   string
+	ActionDate pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
 }
 
 type CustomerPayment struct {
