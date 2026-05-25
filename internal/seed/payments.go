@@ -16,7 +16,7 @@ func createCustomerPayments(ctx context.Context, queries *db.Queries, customers 
 	paymentsCreated := 0
 
 	for _, customer := range customers {
-		dataFrom := customer.BillingStartedAt.Time
+		dataFrom := monthStart(customer.BillingStartedAt.Time)
 		payments, err := randomPayments(customer, dataFrom, dataTo, config)
 		if err != nil {
 			return err
@@ -45,8 +45,7 @@ func randomPayments(customer db.Customer, dataFrom time.Time, dataTo time.Time, 
 	for !currentMonth.After(dataTo) {
 		payment, paidAt, exists := randomPayment(customer, currentMonth, lastPaidAt, now, config)
 		if !exists {
-			currentMonth = currentMonth.AddDate(0, 1, 0)
-			continue
+			break
 		}
 
 		payments = append(payments, payment)
@@ -103,4 +102,9 @@ func randomPaidAt(companyType db.CompanyType, month time.Time, lastPaidAt time.T
 func dataToMonth() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+func monthStart(value time.Time) time.Time {
+	value = value.UTC()
+	return time.Date(value.Year(), value.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
