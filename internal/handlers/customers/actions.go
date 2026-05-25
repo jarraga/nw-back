@@ -2,10 +2,13 @@ package customers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"nw-back/internal/postgres/db"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func (h *Handler) CreateAction(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +46,51 @@ func (h *Handler) CreateAction(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) UpdateActionComments(w http.ResponseWriter, r *http.Request) {
+	customerID, err := parseCustomerID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	actionID, err := parseActionID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var request updateActionCommentsRequest
+
+	err = json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	action, err := h.queries.UpdateCustomerActionComments(r.Context(), db.UpdateCustomerActionCommentsParams{
+		ID:         actionID,
+		CustomerID: customerID,
+		Comments:   strings.TrimSpace(request.Comments),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		http.Error(w, "customer action not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "failed to update customer action comments", http.StatusInternalServerError)
+		return
+	}
+
+	response := newActionResponse(action)
+
+	w.Header().Set("Content-Type", "application/json")
 
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {

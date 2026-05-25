@@ -56,6 +56,10 @@ type createActionRequest struct {
 	Comments string `json:"comments"`
 }
 
+type updateActionCommentsRequest struct {
+	Comments string `json:"comments"`
+}
+
 type createPaymentRequest struct {
 	Year   int32   `json:"year"`
 	Month  int32   `json:"month"`

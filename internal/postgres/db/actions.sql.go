@@ -88,3 +88,37 @@ func (q *Queries) ListCustomerActionsLastThreeMonths(ctx context.Context, custom
 	}
 	return items, nil
 }
+
+const updateCustomerActionComments = `-- name: UpdateCustomerActionComments :one
+UPDATE customer_actions
+SET comments = $1
+WHERE id = $2
+  AND customer_id = $3
+RETURNING
+  id,
+  customer_id,
+  type,
+  comments,
+  action_date,
+  created_at
+`
+
+type UpdateCustomerActionCommentsParams struct {
+	Comments   string
+	ID         int64
+	CustomerID int64
+}
+
+func (q *Queries) UpdateCustomerActionComments(ctx context.Context, arg UpdateCustomerActionCommentsParams) (CustomerAction, error) {
+	row := q.db.QueryRow(ctx, updateCustomerActionComments, arg.Comments, arg.ID, arg.CustomerID)
+	var i CustomerAction
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.Type,
+		&i.Comments,
+		&i.ActionDate,
+		&i.CreatedAt,
+	)
+	return i, err
+}

@@ -217,6 +217,24 @@ func parseCustomerID(r *http.Request) (int64, error) {
 	return customerID, nil
 }
 
+func parseActionID(r *http.Request) (int64, error) {
+	value := chi.URLParam(r, "actionID")
+	if value == "" {
+		return 0, fmt.Errorf("actionID is required")
+	}
+
+	actionID, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("actionID must be a number")
+	}
+
+	if actionID <= 0 {
+		return 0, fmt.Errorf("actionID must be greater than 0")
+	}
+
+	return actionID, nil
+}
+
 func parseCustomerActionType(value string) (db.CustomerActionType, error) {
 	actionType := db.CustomerActionType(strings.TrimSpace(value))
 

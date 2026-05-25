@@ -16,6 +16,19 @@ RETURNING
   action_date,
   created_at;
 
+-- name: UpdateCustomerActionComments :one
+UPDATE customer_actions
+SET comments = sqlc.arg('comments')
+WHERE id = sqlc.arg('id')
+  AND customer_id = sqlc.arg('customer_id')
+RETURNING
+  id,
+  customer_id,
+  type,
+  comments,
+  action_date,
+  created_at;
+
 -- name: ListCustomerActionsLastThreeMonths :many
 SELECT
   id,
