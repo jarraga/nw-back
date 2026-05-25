@@ -5,11 +5,19 @@ import (
 	"errors"
 	"net/http"
 
+	"nw-back/internal/postgres/db"
+
 	"github.com/jackc/pgx/v5"
 )
 
 func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 	customerID, err := parseCustomerID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	debtParams, err := parseDebtParams(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -37,7 +45,16 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := newDetailResponse(customer, actions, payments)
+	debt, err := h.queries.GetCustomerDebtSummary(r.Context(), db.GetCustomerDebtSummaryParams{
+		DueDay:     int32(debtParams.dueDay),
+		CustomerID: customerID,
+	})
+	if err != nil {
+		http.Error(w, "failed to get customer debt", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newDetailResponse(customer, actions, payments, debt, int32(debtParams.dueDay))
 	if err != nil {
 		http.Error(w, "failed to build customer detail response", http.StatusInternalServerError)
 		return

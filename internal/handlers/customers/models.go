@@ -100,6 +100,13 @@ type detailResponse struct {
 	Customer response          `json:"customer"`
 	Actions  []actionResponse  `json:"actions"`
 	Payments []paymentResponse `json:"payments"`
+	Debt     customerDebt      `json:"debt"`
+}
+
+type customerDebt struct {
+	DueDay        int32 `json:"dueDay"`
+	OverdueMonths int32 `json:"overdueMonths"`
+	OverdueAmount int64 `json:"overdueAmount"`
 }
 
 type monthlyDelinquencyItemResponse struct {
@@ -251,7 +258,7 @@ func newPaymentResponses(payments []db.CustomerPayment) []paymentResponse {
 	return items
 }
 
-func newDetailResponse(customer db.Customer, actions []db.CustomerAction, payments []db.CustomerPayment) (detailResponse, error) {
+func newDetailResponse(customer db.Customer, actions []db.CustomerAction, payments []db.CustomerPayment, debt db.GetCustomerDebtSummaryRow, dueDay int32) (detailResponse, error) {
 	customerResponse, err := newCustomerResponse(customer)
 	if err != nil {
 		return detailResponse{}, err
@@ -261,6 +268,11 @@ func newDetailResponse(customer db.Customer, actions []db.CustomerAction, paymen
 		Customer: customerResponse,
 		Actions:  newActionResponses(actions),
 		Payments: newPaymentResponses(payments),
+		Debt: customerDebt{
+			DueDay:        dueDay,
+			OverdueMonths: debt.OverdueMonths,
+			OverdueAmount: debt.OverdueAmount,
+		},
 	}, nil
 }
 
