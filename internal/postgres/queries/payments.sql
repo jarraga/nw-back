@@ -70,3 +70,53 @@ WHERE customer_id = sqlc.arg('customer_id')
   AND make_date(year, month, 1) >= date_trunc('month', CURRENT_DATE)::date - INTERVAL '11 months'
   AND make_date(year, month, 1) <= date_trunc('month', CURRENT_DATE)::date
 ORDER BY year DESC, month DESC;
+
+-- name: GetMonthlyDelinquencyRate :many
+WITH months AS (
+  SELECT generate_series(1, 12)::int AS month
+),
+customer_months AS (
+  SELECT
+    months.month,
+    c.id AS customer_id,
+    (
+      make_date(sqlc.arg('year')::int, months.month, 1) +
+      (
+        LEAST(
+          sqlc.arg('due_day')::int,
+          EXTRACT(
+            DAY FROM make_date(sqlc.arg('year')::int, months.month, 1) + INTERVAL '1 month - 1 day'
+          )::int
+        ) - 1
+      ) * INTERVAL '1 day'
+    )::date AS due_date
+  FROM months
+  JOIN customers c
+    ON date_trunc('month', c.billing_started_at)::date <= make_date(sqlc.arg('year')::int, months.month, 1)
+)
+SELECT
+  months.month,
+  COUNT(customer_months.customer_id)::int AS total_customers,
+  COUNT(customer_months.customer_id) FILTER (
+    WHERE customer_payments.id IS NULL
+       OR customer_payments.status <> 'paid'
+       OR customer_payments.paid_at::date > customer_months.due_date
+  )::int AS overdue_customers,
+  COALESCE(
+    COUNT(customer_months.customer_id) FILTER (
+      WHERE customer_payments.id IS NULL
+         OR customer_payments.status <> 'paid'
+         OR customer_payments.paid_at::date > customer_months.due_date
+    )::double precision * 100 / NULLIF(COUNT(customer_months.customer_id), 0),
+    0
+  )::double precision AS delinquency_percentage
+FROM months
+LEFT JOIN customer_months
+  ON customer_months.month = months.month
+ AND customer_months.due_date <= CURRENT_DATE
+LEFT JOIN customer_payments
+  ON customer_payments.customer_id = customer_months.customer_id
+ AND customer_payments.year = sqlc.arg('year')::int
+ AND customer_payments.month = months.month
+GROUP BY months.month
+ORDER BY months.month;

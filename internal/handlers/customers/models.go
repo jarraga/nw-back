@@ -88,6 +88,19 @@ type detailResponse struct {
 	Payments []paymentResponse `json:"payments"`
 }
 
+type monthlyDelinquencyItemResponse struct {
+	Month                 int32   `json:"month"`
+	TotalCustomers        int32   `json:"totalCustomers"`
+	OverdueCustomers      int32   `json:"overdueCustomers"`
+	DelinquencyPercentage float64 `json:"delinquencyPercentage"`
+}
+
+type monthlyDelinquencyResponse struct {
+	Year   int32                            `json:"year"`
+	DueDay int32                            `json:"dueDay"`
+	Items  []monthlyDelinquencyItemResponse `json:"items"`
+}
+
 func newCustomerResponse(customer db.Customer) (response, error) {
 	monthlyFee, err := customer.MonthlyFee.Float64Value()
 	if err != nil {
@@ -243,4 +256,23 @@ func newDetailResponse(customer db.Customer, actions []db.CustomerAction, paymen
 		Actions:  newActionResponses(actions),
 		Payments: newPaymentResponses(payments),
 	}, nil
+}
+
+func newMonthlyDelinquencyResponse(year int32, dueDay int32, rows []db.GetMonthlyDelinquencyRateRow) monthlyDelinquencyResponse {
+	items := make([]monthlyDelinquencyItemResponse, 0, len(rows))
+
+	for _, row := range rows {
+		items = append(items, monthlyDelinquencyItemResponse{
+			Month:                 row.Month,
+			TotalCustomers:        row.TotalCustomers,
+			OverdueCustomers:      row.OverdueCustomers,
+			DelinquencyPercentage: row.DelinquencyPercentage,
+		})
+	}
+
+	return monthlyDelinquencyResponse{
+		Year:   year,
+		DueDay: dueDay,
+		Items:  items,
+	}
 }

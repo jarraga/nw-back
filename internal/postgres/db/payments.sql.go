@@ -64,6 +64,94 @@ func (q *Queries) CreateCustomerPayment(ctx context.Context, arg CreateCustomerP
 	return i, err
 }
 
+const getMonthlyDelinquencyRate = `-- name: GetMonthlyDelinquencyRate :many
+WITH months AS (
+  SELECT generate_series(1, 12)::int AS month
+),
+customer_months AS (
+  SELECT
+    months.month,
+    c.id AS customer_id,
+    (
+      make_date($1::int, months.month, 1) +
+      (
+        LEAST(
+          $2::int,
+          EXTRACT(
+            DAY FROM make_date($1::int, months.month, 1) + INTERVAL '1 month - 1 day'
+          )::int
+        ) - 1
+      ) * INTERVAL '1 day'
+    )::date AS due_date
+  FROM months
+  JOIN customers c
+    ON date_trunc('month', c.billing_started_at)::date <= make_date($1::int, months.month, 1)
+)
+SELECT
+  months.month,
+  COUNT(customer_months.customer_id)::int AS total_customers,
+  COUNT(customer_months.customer_id) FILTER (
+    WHERE customer_payments.id IS NULL
+       OR customer_payments.status <> 'paid'
+       OR customer_payments.paid_at::date > customer_months.due_date
+  )::int AS overdue_customers,
+  COALESCE(
+    COUNT(customer_months.customer_id) FILTER (
+      WHERE customer_payments.id IS NULL
+         OR customer_payments.status <> 'paid'
+         OR customer_payments.paid_at::date > customer_months.due_date
+    )::double precision * 100 / NULLIF(COUNT(customer_months.customer_id), 0),
+    0
+  )::double precision AS delinquency_percentage
+FROM months
+LEFT JOIN customer_months
+  ON customer_months.month = months.month
+ AND customer_months.due_date <= CURRENT_DATE
+LEFT JOIN customer_payments
+  ON customer_payments.customer_id = customer_months.customer_id
+ AND customer_payments.year = $1::int
+ AND customer_payments.month = months.month
+GROUP BY months.month
+ORDER BY months.month
+`
+
+type GetMonthlyDelinquencyRateParams struct {
+	Year   int32
+	DueDay int32
+}
+
+type GetMonthlyDelinquencyRateRow struct {
+	Month                 int32
+	TotalCustomers        int32
+	OverdueCustomers      int32
+	DelinquencyPercentage float64
+}
+
+func (q *Queries) GetMonthlyDelinquencyRate(ctx context.Context, arg GetMonthlyDelinquencyRateParams) ([]GetMonthlyDelinquencyRateRow, error) {
+	rows, err := q.db.Query(ctx, getMonthlyDelinquencyRate, arg.Year, arg.DueDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMonthlyDelinquencyRateRow
+	for rows.Next() {
+		var i GetMonthlyDelinquencyRateRow
+		if err := rows.Scan(
+			&i.Month,
+			&i.TotalCustomers,
+			&i.OverdueCustomers,
+			&i.DelinquencyPercentage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTotalCustomerDebt = `-- name: GetTotalCustomerDebt :one
 WITH customer_months AS (
   SELECT

@@ -40,6 +40,11 @@ type searchParams struct {
 	offset      int
 }
 
+type monthlyDelinquencyParams struct {
+	year   int
+	dueDay int
+}
+
 func parseListParams(r *http.Request) (listParams, error) {
 	limit, err := queryInt(r, "limit", defaultLimit)
 	if err != nil {
@@ -117,6 +122,27 @@ func parseDebtListParams(r *http.Request) (debtListParams, error) {
 		companyTypes:  companyTypes,
 		limit:         list.limit,
 		offset:        list.offset,
+	}, nil
+}
+
+func parseMonthlyDelinquencyParams(r *http.Request) (monthlyDelinquencyParams, error) {
+	year, err := requiredQueryInt(r, "year")
+	if err != nil {
+		return monthlyDelinquencyParams{}, err
+	}
+
+	if year < 1900 || year > 2100 {
+		return monthlyDelinquencyParams{}, fmt.Errorf("year must be between 1900 and 2100")
+	}
+
+	debt, err := parseDebtParams(r)
+	if err != nil {
+		return monthlyDelinquencyParams{}, err
+	}
+
+	return monthlyDelinquencyParams{
+		year:   year,
+		dueDay: debt.dueDay,
 	}, nil
 }
 
@@ -219,6 +245,20 @@ func parsePaymentStatus(value string) (db.PaymentStatus, error) {
 	default:
 		return "", fmt.Errorf("status must be pending or paid")
 	}
+}
+
+func requiredQueryInt(r *http.Request, key string) (int, error) {
+	value := r.URL.Query().Get(key)
+	if value == "" {
+		return 0, fmt.Errorf("%s is required", key)
+	}
+
+	number, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a number", key)
+	}
+
+	return number, nil
 }
 
 func queryInt(r *http.Request, key string, fallback int) (int, error) {
