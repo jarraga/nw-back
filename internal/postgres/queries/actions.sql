@@ -2,17 +2,20 @@
 INSERT INTO customer_actions (
   customer_id,
   type,
-  comments
+  comments,
+  informant_name
 ) VALUES (
   sqlc.arg('customer_id'),
   sqlc.arg('type'),
-  sqlc.arg('comments')
+  sqlc.arg('comments'),
+  sqlc.narg('informant_name')
 )
 RETURNING
   id,
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at;
 
@@ -26,6 +29,7 @@ RETURNING
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at;
 
@@ -40,6 +44,7 @@ SELECT
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at
 FROM customer_actions

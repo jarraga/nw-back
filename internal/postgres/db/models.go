@@ -153,12 +153,13 @@ type Customer struct {
 }
 
 type CustomerAction struct {
-	ID         int64
-	CustomerID int64
-	Type       CustomerActionType
-	Comments   string
-	ActionDate pgtype.Timestamptz
-	CreatedAt  pgtype.Timestamptz
+	ID            int64
+	CustomerID    int64
+	Type          CustomerActionType
+	Comments      string
+	InformantName pgtype.Text
+	ActionDate    pgtype.Timestamptz
+	CreatedAt     pgtype.Timestamptz
 }
 
 type CustomerPayment struct {

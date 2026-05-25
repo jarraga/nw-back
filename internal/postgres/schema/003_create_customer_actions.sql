@@ -10,6 +10,7 @@ CREATE TABLE customer_actions (
   customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   type customer_action_type NOT NULL,
   comments TEXT NOT NULL DEFAULT '',
+  informant_name TEXT,
   action_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

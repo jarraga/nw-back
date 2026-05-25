@@ -7,41 +7,53 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createCustomerAction = `-- name: CreateCustomerAction :one
 INSERT INTO customer_actions (
   customer_id,
   type,
-  comments
+  comments,
+  informant_name
 ) VALUES (
   $1,
   $2,
-  $3
+  $3,
+  $4
 )
 RETURNING
   id,
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at
 `
 
 type CreateCustomerActionParams struct {
-	CustomerID int64
-	Type       CustomerActionType
-	Comments   string
+	CustomerID    int64
+	Type          CustomerActionType
+	Comments      string
+	InformantName pgtype.Text
 }
 
 func (q *Queries) CreateCustomerAction(ctx context.Context, arg CreateCustomerActionParams) (CustomerAction, error) {
-	row := q.db.QueryRow(ctx, createCustomerAction, arg.CustomerID, arg.Type, arg.Comments)
+	row := q.db.QueryRow(ctx, createCustomerAction,
+		arg.CustomerID,
+		arg.Type,
+		arg.Comments,
+		arg.InformantName,
+	)
 	var i CustomerAction
 	err := row.Scan(
 		&i.ID,
 		&i.CustomerID,
 		&i.Type,
 		&i.Comments,
+		&i.InformantName,
 		&i.ActionDate,
 		&i.CreatedAt,
 	)
@@ -73,6 +85,7 @@ SELECT
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at
 FROM customer_actions
@@ -95,6 +108,7 @@ func (q *Queries) ListCustomerActionsLastThreeMonths(ctx context.Context, custom
 			&i.CustomerID,
 			&i.Type,
 			&i.Comments,
+			&i.InformantName,
 			&i.ActionDate,
 			&i.CreatedAt,
 		); err != nil {
@@ -118,6 +132,7 @@ RETURNING
   customer_id,
   type,
   comments,
+  informant_name,
   action_date,
   created_at
 `
@@ -136,6 +151,7 @@ func (q *Queries) UpdateCustomerActionComments(ctx context.Context, arg UpdateCu
 		&i.CustomerID,
 		&i.Type,
 		&i.Comments,
+		&i.InformantName,
 		&i.ActionDate,
 		&i.CreatedAt,
 	)

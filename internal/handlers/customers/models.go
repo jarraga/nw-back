@@ -52,8 +52,9 @@ type createCustomerRequest struct {
 }
 
 type createActionRequest struct {
-	Type     string `json:"type"`
-	Comments string `json:"comments"`
+	Type          string  `json:"type"`
+	Comments      string  `json:"comments"`
+	InformantName *string `json:"informantName"`
 }
 
 type updateActionCommentsRequest struct {
@@ -78,12 +79,13 @@ type updateCustomerRequest struct {
 }
 
 type actionResponse struct {
-	ID         int64                 `json:"id"`
-	CustomerID int64                 `json:"customerID"`
-	Type       db.CustomerActionType `json:"type"`
-	Comments   string                `json:"comments"`
-	ActionDate time.Time             `json:"actionDate"`
-	CreatedAt  time.Time             `json:"createdAt"`
+	ID            int64                 `json:"id"`
+	CustomerID    int64                 `json:"customerID"`
+	Type          db.CustomerActionType `json:"type"`
+	Comments      string                `json:"comments"`
+	InformantName *string               `json:"informantName"`
+	ActionDate    time.Time             `json:"actionDate"`
+	CreatedAt     time.Time             `json:"createdAt"`
 }
 
 type paymentResponse struct {
@@ -210,13 +212,20 @@ func newPaginatedDebtListResponse(customers []db.ListCustomersDebtRow, total int
 }
 
 func newActionResponse(action db.CustomerAction) actionResponse {
+	var informantName *string
+
+	if action.InformantName.Valid {
+		informantName = &action.InformantName.String
+	}
+
 	return actionResponse{
-		ID:         action.ID,
-		CustomerID: action.CustomerID,
-		Type:       action.Type,
-		Comments:   action.Comments,
-		ActionDate: action.ActionDate.Time,
-		CreatedAt:  action.CreatedAt.Time,
+		ID:            action.ID,
+		CustomerID:    action.CustomerID,
+		Type:          action.Type,
+		Comments:      action.Comments,
+		InformantName: informantName,
+		ActionDate:    action.ActionDate.Time,
+		CreatedAt:     action.CreatedAt.Time,
 	}
 }
 

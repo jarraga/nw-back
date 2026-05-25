@@ -9,6 +9,7 @@ import (
 	"nw-back/internal/postgres/db"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (h *Handler) CreateAction(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +34,10 @@ func (h *Handler) CreateAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	action, err := h.queries.CreateCustomerAction(r.Context(), db.CreateCustomerActionParams{
-		CustomerID: customerID,
-		Type:       actionType,
-		Comments:   strings.TrimSpace(request.Comments),
+		CustomerID:    customerID,
+		Type:          actionType,
+		Comments:      strings.TrimSpace(request.Comments),
+		InformantName: newInformantName(request.InformantName),
 	})
 	if err != nil {
 		http.Error(w, "failed to create customer action", http.StatusInternalServerError)
@@ -126,4 +128,20 @@ func (h *Handler) DeleteAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func newInformantName(value *string) pgtype.Text {
+	if value == nil {
+		return pgtype.Text{}
+	}
+
+	informantName := strings.TrimSpace(*value)
+	if informantName == "" {
+		return pgtype.Text{}
+	}
+
+	return pgtype.Text{
+		String: informantName,
+		Valid:  true,
+	}
 }
