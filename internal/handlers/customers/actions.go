@@ -97,3 +97,33 @@ func (h *Handler) UpdateActionComments(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) DeleteAction(w http.ResponseWriter, r *http.Request) {
+	customerID, err := parseCustomerID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	actionID, err := parseActionID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rowsAffected, err := h.queries.DeleteCustomerAction(r.Context(), db.DeleteCustomerActionParams{
+		ID:         actionID,
+		CustomerID: customerID,
+	})
+	if err != nil {
+		http.Error(w, "failed to delete customer action", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "customer action not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

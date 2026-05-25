@@ -29,6 +29,11 @@ RETURNING
   action_date,
   created_at;
 
+-- name: DeleteCustomerAction :execrows
+DELETE FROM customer_actions
+WHERE id = sqlc.arg('id')
+  AND customer_id = sqlc.arg('customer_id');
+
 -- name: ListCustomerActionsLastThreeMonths :many
 SELECT
   id,

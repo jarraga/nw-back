@@ -48,6 +48,25 @@ func (q *Queries) CreateCustomerAction(ctx context.Context, arg CreateCustomerAc
 	return i, err
 }
 
+const deleteCustomerAction = `-- name: DeleteCustomerAction :execrows
+DELETE FROM customer_actions
+WHERE id = $1
+  AND customer_id = $2
+`
+
+type DeleteCustomerActionParams struct {
+	ID         int64
+	CustomerID int64
+}
+
+func (q *Queries) DeleteCustomerAction(ctx context.Context, arg DeleteCustomerActionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCustomerAction, arg.ID, arg.CustomerID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listCustomerActionsLastThreeMonths = `-- name: ListCustomerActionsLastThreeMonths :many
 SELECT
   id,
