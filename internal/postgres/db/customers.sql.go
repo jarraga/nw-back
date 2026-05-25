@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCustomers = `-- name: CountCustomers :one
+SELECT COUNT(*)::int
+FROM customers
+`
+
+func (q *Queries) CountCustomers(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countCustomers)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countCustomersDebt = `-- name: CountCustomersDebt :one
+SELECT COUNT(*)::int
+FROM customers c
+WHERE cardinality($1::text[]) = 0
+   OR c.company_type::text = ANY($1::text[])
+`
+
+func (q *Queries) CountCustomersDebt(ctx context.Context, companyTypes []string) (int32, error) {
+	row := q.db.QueryRow(ctx, countCustomersDebt, companyTypes)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createCustomer = `-- name: CreateCustomer :one
 INSERT INTO customers (
   company_name,

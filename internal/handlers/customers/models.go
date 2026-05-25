@@ -17,6 +17,11 @@ type response struct {
 	CreatedAt        time.Time      `json:"createdAt"`
 }
 
+type paginatedResponse[T any] struct {
+	Items []T   `json:"items"`
+	Total int32 `json:"total"`
+}
+
 type debtResponse struct {
 	TotalDebt float64 `json:"totalDebt"`
 }
@@ -57,6 +62,18 @@ func newListResponse(customers []db.Customer) ([]response, error) {
 	return items, nil
 }
 
+func newPaginatedListResponse(customers []db.Customer, total int32) (paginatedResponse[response], error) {
+	items, err := newListResponse(customers)
+	if err != nil {
+		return paginatedResponse[response]{}, err
+	}
+
+	return paginatedResponse[response]{
+		Items: items,
+		Total: total,
+	}, nil
+}
+
 func newDebtResponse(totalDebt float64) debtResponse {
 	return debtResponse{
 		TotalDebt: totalDebt,
@@ -91,4 +108,16 @@ func newDebtListResponse(customers []db.ListCustomersDebtRow) ([]debtListRespons
 	}
 
 	return items, nil
+}
+
+func newPaginatedDebtListResponse(customers []db.ListCustomersDebtRow, total int32) (paginatedResponse[debtListResponse], error) {
+	items, err := newDebtListResponse(customers)
+	if err != nil {
+		return paginatedResponse[debtListResponse]{}, err
+	}
+
+	return paginatedResponse[debtListResponse]{
+		Items: items,
+		Total: total,
+	}, nil
 }

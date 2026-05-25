@@ -13,6 +13,10 @@ ORDER BY id
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
 
+-- name: CountCustomers :one
+SELECT COUNT(*)::int
+FROM customers;
+
 -- name: CreateCustomer :one
 INSERT INTO customers (
   company_name,
@@ -102,3 +106,9 @@ ORDER BY
   id ASC
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
+
+-- name: CountCustomersDebt :one
+SELECT COUNT(*)::int
+FROM customers c
+WHERE cardinality(sqlc.arg('company_types')::text[]) = 0
+   OR c.company_type::text = ANY(sqlc.arg('company_types')::text[]);

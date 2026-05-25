@@ -33,7 +33,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := newListResponse(customers)
+	total, err := h.queries.CountCustomers(r.Context())
+	if err != nil {
+		http.Error(w, "failed to count customers", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newPaginatedListResponse(customers, total)
 	if err != nil {
 		http.Error(w, "failed to build customers response", http.StatusInternalServerError)
 		return
@@ -96,7 +102,13 @@ func (h *Handler) DebtList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := newDebtListResponse(customers)
+	total, err := h.queries.CountCustomersDebt(r.Context(), params.companyTypes)
+	if err != nil {
+		http.Error(w, "failed to count customers debt", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newPaginatedDebtListResponse(customers, total)
 	if err != nil {
 		http.Error(w, "failed to build customers debt response", http.StatusInternalServerError)
 		return
