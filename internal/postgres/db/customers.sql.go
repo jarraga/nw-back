@@ -57,14 +57,16 @@ INSERT INTO customers (
   phone,
   email,
   monthly_fee,
-  billing_started_at
+  billing_started_at,
+  comments
 ) VALUES (
   $1,
   $2,
   $3,
   $4,
   $5,
-  $6
+  $6,
+  $7
 )
 RETURNING
   id,
@@ -74,6 +76,7 @@ RETURNING
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at
 `
 
@@ -84,6 +87,7 @@ type CreateCustomerParams struct {
 	Email            string
 	MonthlyFee       pgtype.Numeric
 	BillingStartedAt pgtype.Date
+	Comments         string
 }
 
 func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
@@ -94,6 +98,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		arg.Email,
 		arg.MonthlyFee,
 		arg.BillingStartedAt,
+		arg.Comments,
 	)
 	var i Customer
 	err := row.Scan(
@@ -104,6 +109,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.Email,
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
+		&i.Comments,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -118,6 +124,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at
 FROM customers
 ORDER BY id
@@ -147,6 +154,7 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 			&i.Email,
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
+			&i.Comments,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -169,6 +177,7 @@ WITH customer_debts AS (
     c.email,
     c.monthly_fee,
     c.billing_started_at,
+    c.comments,
     COUNT(overdue_months.month_date)::int AS overdue_months,
     COALESCE(SUM(c.monthly_fee), 0)::numeric AS overdue_amount
   FROM customers c
@@ -209,6 +218,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   overdue_months,
   overdue_amount
 FROM customer_debts
@@ -241,6 +251,7 @@ type ListCustomersDebtRow struct {
 	Email            string
 	MonthlyFee       pgtype.Numeric
 	BillingStartedAt pgtype.Date
+	Comments         string
 	OverdueMonths    int32
 	OverdueAmount    pgtype.Numeric
 }
@@ -269,6 +280,7 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 			&i.Email,
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
+			&i.Comments,
 			&i.OverdueMonths,
 			&i.OverdueAmount,
 		); err != nil {
@@ -291,6 +303,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at
 FROM customers
 WHERE company_name ILIKE '%' || $1::text || '%'
@@ -322,6 +335,7 @@ func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, arg SearchCu
 			&i.Email,
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
+			&i.Comments,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

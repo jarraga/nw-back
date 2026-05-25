@@ -104,6 +104,7 @@ type Customer struct {
 	Email            string
 	MonthlyFee       pgtype.Numeric
 	BillingStartedAt pgtype.Date
+	Comments         string
 	CreatedAt        pgtype.Timestamptz
 }
 

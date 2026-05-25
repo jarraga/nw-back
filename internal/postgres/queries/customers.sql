@@ -7,6 +7,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at
 FROM customers
 ORDER BY id
@@ -26,6 +27,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at
 FROM customers
 WHERE company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
@@ -45,14 +47,16 @@ INSERT INTO customers (
   phone,
   email,
   monthly_fee,
-  billing_started_at
+  billing_started_at,
+  comments
 ) VALUES (
   sqlc.arg('company_name'),
   sqlc.arg('company_type'),
   sqlc.arg('phone'),
   sqlc.arg('email'),
   sqlc.arg('monthly_fee'),
-  sqlc.arg('billing_started_at')
+  sqlc.arg('billing_started_at'),
+  sqlc.arg('comments')
 )
 RETURNING
   id,
@@ -62,6 +66,7 @@ RETURNING
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   created_at;
 
 -- name: ListCustomersDebt :many
@@ -74,6 +79,7 @@ WITH customer_debts AS (
     c.email,
     c.monthly_fee,
     c.billing_started_at,
+    c.comments,
     COUNT(overdue_months.month_date)::int AS overdue_months,
     COALESCE(SUM(c.monthly_fee), 0)::numeric AS overdue_amount
   FROM customers c
@@ -114,6 +120,7 @@ SELECT
   email,
   monthly_fee,
   billing_started_at,
+  comments,
   overdue_months,
   overdue_amount
 FROM customer_debts

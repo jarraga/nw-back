@@ -82,6 +82,7 @@ func randomCustomer(config Config) (db.CreateCustomerParams, error) {
 		Email:            gofakeit.Email(),
 		MonthlyFee:       monthlyFee,
 		BillingStartedAt: billingStartedAt,
+		Comments:         "",
 	}, nil
 }
 

@@ -14,6 +14,7 @@ type response struct {
 	Email            string         `json:"email"`
 	MonthlyFee       float64        `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
+	Comments         string         `json:"comments"`
 	CreatedAt        time.Time      `json:"createdAt"`
 }
 
@@ -34,6 +35,7 @@ type debtListResponse struct {
 	Email            string         `json:"email"`
 	MonthlyFee       float64        `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
+	Comments         string         `json:"comments"`
 	OverdueMonths    int32          `json:"overdueMonths"`
 	OverdueAmount    float64        `json:"overdueAmount"`
 }
@@ -55,6 +57,7 @@ func newListResponse(customers []db.Customer) ([]response, error) {
 			Email:            customer.Email,
 			MonthlyFee:       monthlyFee.Float64,
 			BillingStartedAt: customer.BillingStartedAt.Time,
+			Comments:         customer.Comments,
 			CreatedAt:        customer.CreatedAt.Time,
 		})
 	}
@@ -102,6 +105,7 @@ func newDebtListResponse(customers []db.ListCustomersDebtRow) ([]debtListRespons
 			Email:            customer.Email,
 			MonthlyFee:       monthlyFee.Float64,
 			BillingStartedAt: customer.BillingStartedAt.Time,
+			Comments:         customer.Comments,
 			OverdueMonths:    customer.OverdueMonths,
 			OverdueAmount:    overdueAmount.Float64,
 		})

@@ -14,6 +14,7 @@ CREATE TABLE customers (
   email TEXT NOT NULL,
   monthly_fee NUMERIC(12, 2) NOT NULL,
   billing_started_at DATE NOT NULL,
+  comments TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
