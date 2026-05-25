@@ -1,6 +1,7 @@
 package customers
 
 import (
+	"encoding/json"
 	"time"
 
 	"nw-back/internal/postgres/db"
@@ -38,6 +39,16 @@ type debtListResponse struct {
 	Comments         string         `json:"comments"`
 	OverdueMonths    int32          `json:"overdueMonths"`
 	OverdueAmount    float64        `json:"overdueAmount"`
+}
+
+type createCustomerRequest struct {
+	CompanyName      string      `json:"companyName"`
+	CompanyType      string      `json:"companyType"`
+	Phone            string      `json:"phone"`
+	Email            string      `json:"email"`
+	MonthlyFee       json.Number `json:"monthlyFee"`
+	BillingStartedAt string      `json:"billingStartedAt"`
+	Comments         string      `json:"comments"`
 }
 
 type createActionRequest struct {

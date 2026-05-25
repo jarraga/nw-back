@@ -160,6 +160,19 @@ func parseCompanyTypes(r *http.Request) ([]string, error) {
 	return companyTypes, nil
 }
 
+func parseCompanyType(value string) (db.CompanyType, error) {
+	companyType := db.CompanyType(strings.TrimSpace(value))
+
+	switch companyType {
+	case db.CompanyTypeEnterprise,
+		db.CompanyTypePyme,
+		db.CompanyTypeStartup:
+		return companyType, nil
+	default:
+		return "", fmt.Errorf("companyType must be enterprise, pyme or startup")
+	}
+}
+
 func parseCustomerID(r *http.Request) (int64, error) {
 	value := chi.URLParam(r, "customerID")
 	if value == "" {
