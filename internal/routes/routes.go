@@ -5,6 +5,7 @@ import (
 
 	"nw-back/internal/handlers"
 	"nw-back/internal/handlers/customers"
+	"nw-back/internal/handlers/presence"
 	"nw-back/internal/postgres/db"
 
 	"github.com/go-chi/chi/v5"
@@ -14,6 +15,7 @@ import (
 func NewRouter(queries *db.Queries) http.Handler {
 	router := chi.NewRouter()
 	customersHandler := customers.NewHandler(queries)
+	presenceHub := presence.NewHub()
 
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -28,6 +30,7 @@ func NewRouter(queries *db.Queries) http.Handler {
 	}))
 
 	router.Get("/", handlers.Home())
+	router.Get("/ws/customer-viewers", presenceHub.Handle)
 	router.Get("/customers", customersHandler.List)
 	router.Post("/customers", customersHandler.Create)
 	router.Get("/customers/search", customersHandler.Search)
