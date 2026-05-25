@@ -32,3 +32,26 @@ func (h *Handler) MonthlyDelinquency(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) DelinquencyRate(w http.ResponseWriter, r *http.Request) {
+	params, err := parseDebtParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	row, err := h.queries.GetCustomerDelinquencyRate(r.Context(), int32(params.dueDay))
+	if err != nil {
+		http.Error(w, "failed to get customer delinquency rate", http.StatusInternalServerError)
+		return
+	}
+
+	response := newDelinquencyRateResponse(int32(params.dueDay), row)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}

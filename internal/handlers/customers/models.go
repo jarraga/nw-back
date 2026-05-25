@@ -111,6 +111,13 @@ type monthlyDelinquencyResponse struct {
 	Items  []monthlyDelinquencyItemResponse `json:"items"`
 }
 
+type delinquencyRateResponse struct {
+	DueDay                int32   `json:"dueDay"`
+	TotalCustomers        int32   `json:"totalCustomers"`
+	OverdueCustomers      int32   `json:"overdueCustomers"`
+	DelinquencyPercentage float64 `json:"delinquencyPercentage"`
+}
+
 func newCustomerResponse(customer db.Customer) (response, error) {
 	return response{
 		ID:               customer.ID,
@@ -269,5 +276,14 @@ func newMonthlyDelinquencyResponse(year int32, dueDay int32, rows []db.GetMonthl
 		Year:   year,
 		DueDay: dueDay,
 		Items:  items,
+	}
+}
+
+func newDelinquencyRateResponse(dueDay int32, row db.GetCustomerDelinquencyRateRow) delinquencyRateResponse {
+	return delinquencyRateResponse{
+		DueDay:                dueDay,
+		TotalCustomers:        row.TotalCustomers,
+		OverdueCustomers:      row.OverdueCustomers,
+		DelinquencyPercentage: row.DelinquencyPercentage,
 	}
 }

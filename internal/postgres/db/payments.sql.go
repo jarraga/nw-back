@@ -64,6 +64,75 @@ func (q *Queries) CreateCustomerPayment(ctx context.Context, arg CreateCustomerP
 	return i, err
 }
 
+const getCustomerDelinquencyRate = `-- name: GetCustomerDelinquencyRate :one
+WITH active_customers AS (
+  SELECT
+    id,
+    billing_started_at
+  FROM customers
+  WHERE date_trunc('month', billing_started_at)::date <= date_trunc('month', CURRENT_DATE)::date
+),
+overdue_customers AS (
+  SELECT DISTINCT
+    active_customers.id
+  FROM active_customers
+  CROSS JOIN LATERAL (
+    SELECT
+      month_date,
+      EXTRACT(YEAR FROM month_date)::int AS year,
+      EXTRACT(MONTH FROM month_date)::int AS month,
+      (
+        month_date::date +
+        (
+          LEAST(
+            $1::int,
+            EXTRACT(
+              DAY FROM date_trunc('month', month_date)::date + INTERVAL '1 month - 1 day'
+            )::int
+          ) - 1
+        ) * INTERVAL '1 day'
+      )::date AS due_date
+    FROM generate_series(
+      date_trunc('month', active_customers.billing_started_at)::date,
+      date_trunc('month', CURRENT_DATE)::date,
+      INTERVAL '1 month'
+    ) AS month_date
+  ) customer_months
+  LEFT JOIN customer_payments cp
+    ON cp.customer_id = active_customers.id
+   AND cp.year = customer_months.year
+   AND cp.month = customer_months.month
+  WHERE customer_months.due_date < CURRENT_DATE
+    AND (
+      cp.id IS NULL
+      OR cp.status <> 'paid'
+    )
+)
+SELECT
+  COUNT(active_customers.id)::int AS total_customers,
+  COUNT(overdue_customers.id)::int AS overdue_customers,
+  COALESCE(
+    COUNT(overdue_customers.id)::double precision * 100 / NULLIF(COUNT(active_customers.id), 0),
+    0
+  )::double precision AS delinquency_percentage
+FROM active_customers
+LEFT JOIN overdue_customers
+  ON overdue_customers.id = active_customers.id
+`
+
+type GetCustomerDelinquencyRateRow struct {
+	TotalCustomers        int32
+	OverdueCustomers      int32
+	DelinquencyPercentage float64
+}
+
+func (q *Queries) GetCustomerDelinquencyRate(ctx context.Context, dueDay int32) (GetCustomerDelinquencyRateRow, error) {
+	row := q.db.QueryRow(ctx, getCustomerDelinquencyRate, dueDay)
+	var i GetCustomerDelinquencyRateRow
+	err := row.Scan(&i.TotalCustomers, &i.OverdueCustomers, &i.DelinquencyPercentage)
+	return i, err
+}
+
 const getMonthlyDelinquencyRate = `-- name: GetMonthlyDelinquencyRate :many
 WITH months AS (
   SELECT generate_series(1, 12)::int AS month

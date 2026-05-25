@@ -20,6 +20,7 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/search", customersHandler.Search)
 	router.Get("/customers/debt", customersHandler.Debt)
 	router.Get("/customers/debt-list", customersHandler.DebtList)
+	router.Get("/customers/delinquency-rate", customersHandler.DelinquencyRate)
 	router.Get("/customers/monthly-delinquency", customersHandler.MonthlyDelinquency)
 	router.Get("/customers/{customerID}", customersHandler.Detail)
 	router.Patch("/customers/{customerID}", customersHandler.Update)
