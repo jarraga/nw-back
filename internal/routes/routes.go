@@ -8,11 +8,24 @@ import (
 	"nw-back/internal/postgres/db"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 func NewRouter(queries *db.Queries) http.Handler {
 	router := chi.NewRouter()
 	customersHandler := customers.NewHandler(queries)
+
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+		AllowedHeaders: []string{"*"},
+	}))
 
 	router.Get("/", handlers.Home())
 	router.Get("/customers", customersHandler.List)
