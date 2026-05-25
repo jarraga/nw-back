@@ -33,7 +33,6 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/ws/customer-viewers", presenceHub.Handle)
 	router.Get("/customers", customersHandler.List)
 	router.Post("/customers", customersHandler.Create)
-	router.Get("/customers/search", customersHandler.Search)
 	router.Get("/customers/debt", customersHandler.Debt)
 	router.Get("/customers/debt-list", customersHandler.DebtList)
 	router.Get("/customers/delinquency-rate", customersHandler.DelinquencyRate)

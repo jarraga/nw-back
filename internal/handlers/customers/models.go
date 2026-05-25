@@ -32,8 +32,6 @@ type debtListResponse struct {
 	ID               int64          `json:"id"`
 	CompanyName      string         `json:"companyName"`
 	CompanyType      db.CompanyType `json:"companyType"`
-	Phone            string         `json:"phone"`
-	Email            string         `json:"email"`
 	MonthlyFee       int32          `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
 	Comments         string         `json:"comments"`
@@ -186,8 +184,6 @@ func newDebtListResponse(customers []db.ListCustomersDebtRow) ([]debtListRespons
 			ID:               customer.ID,
 			CompanyName:      customer.CompanyName,
 			CompanyType:      customer.CompanyType,
-			Phone:            customer.Phone,
-			Email:            customer.Email,
 			MonthlyFee:       customer.MonthlyFee,
 			BillingStartedAt: customer.BillingStartedAt.Time,
 			Comments:         customer.Comments,

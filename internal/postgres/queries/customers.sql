@@ -65,28 +65,6 @@ RETURNING
   comments,
   created_at;
 
--- name: SearchCustomersByCompanyName :many
-SELECT
-  id,
-  company_name,
-  company_type,
-  phone,
-  email,
-  monthly_fee,
-  billing_started_at,
-  comments,
-  created_at
-FROM customers
-WHERE company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
-ORDER BY company_name ASC, id ASC
-LIMIT sqlc.arg('limit')
-OFFSET sqlc.arg('offset');
-
--- name: CountCustomersByCompanyName :one
-SELECT COUNT(*)::int
-FROM customers
-WHERE company_name ILIKE '%' || sqlc.arg('company_name')::text || '%';
-
 -- name: CreateCustomer :one
 INSERT INTO customers (
   company_name,
@@ -122,8 +100,6 @@ WITH customer_debts AS (
     c.id,
     c.company_name,
     c.company_type,
-    c.phone,
-    c.email,
     c.monthly_fee,
     c.billing_started_at,
     c.comments,
@@ -155,16 +131,20 @@ WITH customer_debts AS (
         ) * INTERVAL '1 day'
       )::date < CURRENT_DATE
   ) overdue_months ON true
-  WHERE cardinality(sqlc.arg('company_types')::text[]) = 0
-     OR c.company_type::text = ANY(sqlc.arg('company_types')::text[])
+  WHERE (
+      cardinality(sqlc.arg('company_types')::text[]) = 0
+      OR c.company_type::text = ANY(sqlc.arg('company_types')::text[])
+    )
+    AND (
+      sqlc.arg('company_name')::text = ''
+      OR c.company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
+    )
   GROUP BY c.id
 )
 SELECT
   id,
   company_name,
   company_type,
-  phone,
-  email,
   monthly_fee,
   billing_started_at,
   comments,
@@ -185,5 +165,11 @@ OFFSET sqlc.arg('offset');
 -- name: CountCustomersDebt :one
 SELECT COUNT(*)::int
 FROM customers c
-WHERE cardinality(sqlc.arg('company_types')::text[]) = 0
-   OR c.company_type::text = ANY(sqlc.arg('company_types')::text[]);
+WHERE (
+    cardinality(sqlc.arg('company_types')::text[]) = 0
+    OR c.company_type::text = ANY(sqlc.arg('company_types')::text[])
+  )
+  AND (
+    sqlc.arg('company_name')::text = ''
+    OR c.company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
+  );
