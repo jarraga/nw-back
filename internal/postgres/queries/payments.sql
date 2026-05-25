@@ -55,3 +55,18 @@ LEFT JOIN customer_payments cp
  AND cp.month = cm.month
 WHERE cp.id IS NULL
   AND cm.due_date < CURRENT_DATE;
+
+-- name: ListCustomerPaymentsLastYear :many
+SELECT
+  id,
+  customer_id,
+  year,
+  month,
+  status,
+  paid_at,
+  created_at
+FROM customer_payments
+WHERE customer_id = sqlc.arg('customer_id')
+  AND make_date(year, month, 1) >= date_trunc('month', CURRENT_DATE)::date - INTERVAL '11 months'
+  AND make_date(year, month, 1) <= date_trunc('month', CURRENT_DATE)::date
+ORDER BY year DESC, month DESC;

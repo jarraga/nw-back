@@ -47,3 +47,44 @@ func (q *Queries) CreateCustomerAction(ctx context.Context, arg CreateCustomerAc
 	)
 	return i, err
 }
+
+const listCustomerActionsLastThreeMonths = `-- name: ListCustomerActionsLastThreeMonths :many
+SELECT
+  id,
+  customer_id,
+  type,
+  comments,
+  action_date,
+  created_at
+FROM customer_actions
+WHERE customer_id = $1
+  AND action_date >= NOW() - INTERVAL '3 months'
+ORDER BY action_date DESC, id DESC
+`
+
+func (q *Queries) ListCustomerActionsLastThreeMonths(ctx context.Context, customerID int64) ([]CustomerAction, error) {
+	rows, err := q.db.Query(ctx, listCustomerActionsLastThreeMonths, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CustomerAction
+	for rows.Next() {
+		var i CustomerAction
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerID,
+			&i.Type,
+			&i.Comments,
+			&i.ActionDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

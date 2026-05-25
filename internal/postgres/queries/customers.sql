@@ -18,6 +18,20 @@ OFFSET sqlc.arg('offset');
 SELECT COUNT(*)::int
 FROM customers;
 
+-- name: GetCustomer :one
+SELECT
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at
+FROM customers
+WHERE id = sqlc.arg('id');
+
 -- name: SearchCustomersByCompanyName :many
 SELECT
   id,

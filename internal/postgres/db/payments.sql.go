@@ -106,3 +106,47 @@ func (q *Queries) GetTotalCustomerDebt(ctx context.Context, dueDay int32) (pgtyp
 	err := row.Scan(&total_debt)
 	return total_debt, err
 }
+
+const listCustomerPaymentsLastYear = `-- name: ListCustomerPaymentsLastYear :many
+SELECT
+  id,
+  customer_id,
+  year,
+  month,
+  status,
+  paid_at,
+  created_at
+FROM customer_payments
+WHERE customer_id = $1
+  AND make_date(year, month, 1) >= date_trunc('month', CURRENT_DATE)::date - INTERVAL '11 months'
+  AND make_date(year, month, 1) <= date_trunc('month', CURRENT_DATE)::date
+ORDER BY year DESC, month DESC
+`
+
+func (q *Queries) ListCustomerPaymentsLastYear(ctx context.Context, customerID int64) ([]CustomerPayment, error) {
+	rows, err := q.db.Query(ctx, listCustomerPaymentsLastYear, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CustomerPayment
+	for rows.Next() {
+		var i CustomerPayment
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerID,
+			&i.Year,
+			&i.Month,
+			&i.Status,
+			&i.PaidAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

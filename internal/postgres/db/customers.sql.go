@@ -115,6 +115,38 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 	return i, err
 }
 
+const getCustomer = `-- name: GetCustomer :one
+SELECT
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at
+FROM customers
+WHERE id = $1
+`
+
+func (q *Queries) GetCustomer(ctx context.Context, id int64) (Customer, error) {
+	row := q.db.QueryRow(ctx, getCustomer, id)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listCustomers = `-- name: ListCustomers :many
 SELECT
   id,
