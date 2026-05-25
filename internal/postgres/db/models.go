@@ -146,7 +146,7 @@ type Customer struct {
 	CompanyType      CompanyType
 	Phone            string
 	Email            string
-	MonthlyFee       pgtype.Numeric
+	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
 	CreatedAt        pgtype.Timestamptz

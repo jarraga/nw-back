@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,28 +94,21 @@ func newCreateCustomerParams(request createCustomerRequest) (db.CreateCustomerPa
 	}, nil
 }
 
-func parseMonthlyFee(value json.Number) (pgtype.Numeric, error) {
+func parseMonthlyFee(value json.Number) (int32, error) {
 	if value.String() == "" {
-		return pgtype.Numeric{}, fmt.Errorf("monthlyFee is required")
+		return 0, fmt.Errorf("monthlyFee is required")
 	}
 
-	number, err := value.Float64()
+	number, err := strconv.Atoi(value.String())
 	if err != nil {
-		return pgtype.Numeric{}, fmt.Errorf("monthlyFee must be a number")
+		return 0, fmt.Errorf("monthlyFee must be an integer")
 	}
 
 	if number <= 0 {
-		return pgtype.Numeric{}, fmt.Errorf("monthlyFee must be greater than 0")
+		return 0, fmt.Errorf("monthlyFee must be greater than 0")
 	}
 
-	monthlyFee := pgtype.Numeric{}
-
-	err = monthlyFee.Scan(value.String())
-	if err != nil {
-		return pgtype.Numeric{}, fmt.Errorf("invalid monthlyFee")
-	}
-
-	return monthlyFee, nil
+	return int32(number), nil
 }
 
 func parseBillingStartedAt(value string) (pgtype.Date, error) {

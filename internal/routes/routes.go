@@ -22,6 +22,8 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/debt-list", customersHandler.DebtList)
 	router.Get("/customers/monthly-delinquency", customersHandler.MonthlyDelinquency)
 	router.Get("/customers/{customerID}", customersHandler.Detail)
+	router.Patch("/customers/{customerID}", customersHandler.Update)
+	router.Patch("/customers/{customerID}/comments", customersHandler.UpdateComments)
 	router.Post("/customers/{customerID}/actions", customersHandler.CreateAction)
 	router.Post("/customers/{customerID}/payments", customersHandler.CreatePayment)
 

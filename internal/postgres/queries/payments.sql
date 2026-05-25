@@ -47,7 +47,7 @@ WITH customer_months AS (
   ) AS month_date
 )
 SELECT
-  COALESCE(SUM(cm.monthly_fee), 0)::numeric AS total_debt
+  COALESCE(SUM(cm.monthly_fee), 0)::bigint AS total_debt
 FROM customer_months cm
 LEFT JOIN customer_payments cp
   ON cp.customer_id = cm.customer_id

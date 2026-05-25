@@ -85,7 +85,7 @@ type CreateCustomerParams struct {
 	CompanyType      CompanyType
 	Phone            string
 	Email            string
-	MonthlyFee       pgtype.Numeric
+	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
 }
@@ -211,7 +211,7 @@ WITH customer_debts AS (
     c.billing_started_at,
     c.comments,
     COUNT(overdue_months.month_date)::int AS overdue_months,
-    COALESCE(SUM(c.monthly_fee), 0)::numeric AS overdue_amount
+    COALESCE(SUM(c.monthly_fee), 0)::bigint AS overdue_amount
   FROM customers c
   LEFT JOIN LATERAL (
     SELECT
@@ -281,11 +281,11 @@ type ListCustomersDebtRow struct {
 	CompanyType      CompanyType
 	Phone            string
 	Email            string
-	MonthlyFee       pgtype.Numeric
+	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
 	OverdueMonths    int32
-	OverdueAmount    pgtype.Numeric
+	OverdueAmount    int64
 }
 
 func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtParams) ([]ListCustomersDebtRow, error) {
@@ -378,4 +378,90 @@ func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, arg SearchCu
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCustomerComments = `-- name: UpdateCustomerComments :one
+UPDATE customers
+SET comments = $1
+WHERE id = $2
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at
+`
+
+type UpdateCustomerCommentsParams struct {
+	Comments string
+	ID       int64
+}
+
+func (q *Queries) UpdateCustomerComments(ctx context.Context, arg UpdateCustomerCommentsParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, updateCustomerComments, arg.Comments, arg.ID)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateCustomerContact = `-- name: UpdateCustomerContact :one
+UPDATE customers
+SET
+  phone = $1,
+  email = $2,
+  monthly_fee = $3
+WHERE id = $4
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at
+`
+
+type UpdateCustomerContactParams struct {
+	Phone      string
+	Email      string
+	MonthlyFee int32
+	ID         int64
+}
+
+func (q *Queries) UpdateCustomerContact(ctx context.Context, arg UpdateCustomerContactParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, updateCustomerContact,
+		arg.Phone,
+		arg.Email,
+		arg.MonthlyFee,
+		arg.ID,
+	)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.CreatedAt,
+	)
+	return i, err
 }

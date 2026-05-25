@@ -12,7 +12,7 @@ CREATE TABLE customers (
   company_type company_type NOT NULL,
   phone TEXT NOT NULL,
   email TEXT NOT NULL,
-  monthly_fee NUMERIC(12, 2) NOT NULL,
+  monthly_fee INT NOT NULL,
   billing_started_at DATE NOT NULL,
   comments TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

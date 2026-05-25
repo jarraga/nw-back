@@ -103,13 +103,7 @@ func (h *Handler) Debt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value, err := totalDebt.Float64Value()
-	if err != nil {
-		http.Error(w, "failed to build customer debt response", http.StatusInternalServerError)
-		return
-	}
-
-	response := newDebtResponse(value.Float64)
+	response := newDebtResponse(totalDebt)
 
 	w.Header().Set("Content-Type", "application/json")
 

@@ -32,6 +32,39 @@ SELECT
 FROM customers
 WHERE id = sqlc.arg('id');
 
+-- name: UpdateCustomerComments :one
+UPDATE customers
+SET comments = sqlc.arg('comments')
+WHERE id = sqlc.arg('id')
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at;
+
+-- name: UpdateCustomerContact :one
+UPDATE customers
+SET
+  phone = sqlc.arg('phone'),
+  email = sqlc.arg('email'),
+  monthly_fee = sqlc.arg('monthly_fee')
+WHERE id = sqlc.arg('id')
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  created_at;
+
 -- name: SearchCustomersByCompanyName :many
 SELECT
   id,
@@ -95,7 +128,7 @@ WITH customer_debts AS (
     c.billing_started_at,
     c.comments,
     COUNT(overdue_months.month_date)::int AS overdue_months,
-    COALESCE(SUM(c.monthly_fee), 0)::numeric AS overdue_amount
+    COALESCE(SUM(c.monthly_fee), 0)::bigint AS overdue_amount
   FROM customers c
   LEFT JOIN LATERAL (
     SELECT

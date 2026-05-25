@@ -178,7 +178,7 @@ WITH customer_months AS (
   ) AS month_date
 )
 SELECT
-  COALESCE(SUM(cm.monthly_fee), 0)::numeric AS total_debt
+  COALESCE(SUM(cm.monthly_fee), 0)::bigint AS total_debt
 FROM customer_months cm
 LEFT JOIN customer_payments cp
   ON cp.customer_id = cm.customer_id
@@ -188,9 +188,9 @@ WHERE cp.id IS NULL
   AND cm.due_date < CURRENT_DATE
 `
 
-func (q *Queries) GetTotalCustomerDebt(ctx context.Context, dueDay int32) (pgtype.Numeric, error) {
+func (q *Queries) GetTotalCustomerDebt(ctx context.Context, dueDay int32) (int64, error) {
 	row := q.db.QueryRow(ctx, getTotalCustomerDebt, dueDay)
-	var total_debt pgtype.Numeric
+	var total_debt int64
 	err := row.Scan(&total_debt)
 	return total_debt, err
 }

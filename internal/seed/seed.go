@@ -2,9 +2,7 @@ package seed
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"nw-back/internal/postgres"
@@ -101,17 +99,10 @@ func randomCompanyType(config Config) db.CompanyType {
 	return db.CompanyTypeStartup
 }
 
-func randomMonthlyFee(config Config) (pgtype.Numeric, error) {
-	monthlyFee := pgtype.Numeric{}
+func randomMonthlyFee(config Config) (int32, error) {
 	value := gofakeit.Number(config.MonthlyFeeFrom, config.MonthlyFeeTo)
-	formattedValue := strconv.Itoa(value)
 
-	err := monthlyFee.Scan(formattedValue)
-	if err != nil {
-		return pgtype.Numeric{}, fmt.Errorf("invalid monthly fee: %w", err)
-	}
-
-	return monthlyFee, nil
+	return int32(value), nil
 }
 
 func randomBillingStartedAt(config Config) pgtype.Date {
