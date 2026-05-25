@@ -23,6 +23,19 @@ func (q *Queries) CountCustomers(ctx context.Context) (int32, error) {
 	return column_1, err
 }
 
+const countCustomersByCompanyName = `-- name: CountCustomersByCompanyName :one
+SELECT COUNT(*)::int
+FROM customers
+WHERE company_name ILIKE '%' || $1::text || '%'
+`
+
+func (q *Queries) CountCustomersByCompanyName(ctx context.Context, companyName string) (int32, error) {
+	row := q.db.QueryRow(ctx, countCustomersByCompanyName, companyName)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countCustomersDebt = `-- name: CountCustomersDebt :one
 SELECT COUNT(*)::int
 FROM customers c
@@ -258,6 +271,58 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 			&i.BillingStartedAt,
 			&i.OverdueMonths,
 			&i.OverdueAmount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchCustomersByCompanyName = `-- name: SearchCustomersByCompanyName :many
+SELECT
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  created_at
+FROM customers
+WHERE company_name ILIKE '%' || $1::text || '%'
+ORDER BY company_name ASC, id ASC
+LIMIT $3
+OFFSET $2
+`
+
+type SearchCustomersByCompanyNameParams struct {
+	CompanyName string
+	Offset      int32
+	Limit       int32
+}
+
+func (q *Queries) SearchCustomersByCompanyName(ctx context.Context, arg SearchCustomersByCompanyNameParams) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, searchCustomersByCompanyName, arg.CompanyName, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Customer
+	for rows.Next() {
+		var i Customer
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyName,
+			&i.CompanyType,
+			&i.Phone,
+			&i.Email,
+			&i.MonthlyFee,
+			&i.BillingStartedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

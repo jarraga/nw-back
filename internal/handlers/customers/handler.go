@@ -53,6 +53,43 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
+	params, err := parseSearchParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	customers, err := h.queries.SearchCustomersByCompanyName(r.Context(), db.SearchCustomersByCompanyNameParams{
+		CompanyName: params.companyName,
+		Limit:       int32(params.limit),
+		Offset:      int32(params.offset),
+	})
+	if err != nil {
+		http.Error(w, "failed to search customers", http.StatusInternalServerError)
+		return
+	}
+
+	total, err := h.queries.CountCustomersByCompanyName(r.Context(), params.companyName)
+	if err != nil {
+		http.Error(w, "failed to count customers search", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newPaginatedListResponse(customers, total)
+	if err != nil {
+		http.Error(w, "failed to build customers search response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func (h *Handler) Debt(w http.ResponseWriter, r *http.Request) {
 	params, err := parseDebtParams(r)
 	if err != nil {

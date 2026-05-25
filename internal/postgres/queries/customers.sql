@@ -17,6 +17,27 @@ OFFSET sqlc.arg('offset');
 SELECT COUNT(*)::int
 FROM customers;
 
+-- name: SearchCustomersByCompanyName :many
+SELECT
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  created_at
+FROM customers
+WHERE company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
+ORDER BY company_name ASC, id ASC
+LIMIT sqlc.arg('limit')
+OFFSET sqlc.arg('offset');
+
+-- name: CountCustomersByCompanyName :one
+SELECT COUNT(*)::int
+FROM customers
+WHERE company_name ILIKE '%' || sqlc.arg('company_name')::text || '%';
+
 -- name: CreateCustomer :one
 INSERT INTO customers (
   company_name,

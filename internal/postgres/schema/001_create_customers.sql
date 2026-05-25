@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TYPE company_type AS ENUM (
   'enterprise',
   'pyme',
@@ -14,3 +16,6 @@ CREATE TABLE customers (
   billing_started_at DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_customers_company_name_trgm
+ON customers USING GIN (company_name gin_trgm_ops);

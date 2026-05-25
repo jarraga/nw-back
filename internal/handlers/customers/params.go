@@ -30,6 +30,12 @@ type debtListParams struct {
 	offset        int
 }
 
+type searchParams struct {
+	companyName string
+	limit       int
+	offset      int
+}
+
 func parseListParams(r *http.Request) (listParams, error) {
 	limit, err := queryInt(r, "limit", defaultLimit)
 	if err != nil {
@@ -107,6 +113,24 @@ func parseDebtListParams(r *http.Request) (debtListParams, error) {
 		companyTypes:  companyTypes,
 		limit:         list.limit,
 		offset:        list.offset,
+	}, nil
+}
+
+func parseSearchParams(r *http.Request) (searchParams, error) {
+	companyName := strings.TrimSpace(r.URL.Query().Get("companyName"))
+	if companyName == "" {
+		return searchParams{}, fmt.Errorf("companyName is required")
+	}
+
+	list, err := parseListParams(r)
+	if err != nil {
+		return searchParams{}, err
+	}
+
+	return searchParams{
+		companyName: companyName,
+		limit:       list.limit,
+		offset:      list.offset,
 	}, nil
 }
 
