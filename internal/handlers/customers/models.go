@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"nw-back/internal/postgres/db"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type response struct {
@@ -16,6 +18,7 @@ type response struct {
 	MonthlyFee       int32          `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
 	Comments         string         `json:"comments"`
+	Review           reviewResponse `json:"review"`
 	CreatedAt        time.Time      `json:"createdAt"`
 }
 
@@ -35,6 +38,7 @@ type debtListResponse struct {
 	MonthlyFee       int32          `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
 	Comments         string         `json:"comments"`
+	Review           reviewResponse `json:"review"`
 	OverdueMonths    int32          `json:"overdueMonths"`
 	OverdueAmount    int64          `json:"overdueAmount"`
 }
@@ -74,6 +78,18 @@ type updateCustomerRequest struct {
 	Phone      string      `json:"phone"`
 	Email      string      `json:"email"`
 	MonthlyFee json.Number `json:"monthlyFee"`
+}
+
+type reviewCustomerRequest struct {
+	Days       int32  `json:"days"`
+	ReviewedBy string `json:"reviewedBy"`
+}
+
+type reviewResponse struct {
+	ReviewedAt    *time.Time `json:"reviewedAt"`
+	ReviewedUntil *time.Time `json:"reviewedUntil"`
+	ReviewedBy    *string    `json:"reviewedBy"`
+	IsReviewed    bool       `json:"isReviewed"`
 }
 
 type actionResponse struct {
@@ -139,6 +155,7 @@ func newCustomerResponse(customer db.Customer) (response, error) {
 		MonthlyFee:       customer.MonthlyFee,
 		BillingStartedAt: customer.BillingStartedAt.Time,
 		Comments:         customer.Comments,
+		Review:           newReviewResponse(customer.ReviewedAt, customer.ReviewedUntil, customer.ReviewedBy),
 		CreatedAt:        customer.CreatedAt.Time,
 	}, nil
 }
@@ -187,6 +204,7 @@ func newDebtListResponse(customers []db.ListCustomersDebtRow) ([]debtListRespons
 			MonthlyFee:       customer.MonthlyFee,
 			BillingStartedAt: customer.BillingStartedAt.Time,
 			Comments:         customer.Comments,
+			Review:           newReviewResponse(customer.ReviewedAt, customer.ReviewedUntil, customer.ReviewedBy),
 			OverdueMonths:    customer.OverdueMonths,
 			OverdueAmount:    customer.OverdueAmount,
 		})
@@ -205,6 +223,30 @@ func newPaginatedDebtListResponse(customers []db.ListCustomersDebtRow, total int
 		Items: items,
 		Total: total,
 	}, nil
+}
+
+func newReviewResponse(reviewedAt pgtype.Timestamptz, reviewedUntil pgtype.Timestamptz, reviewedBy pgtype.Text) reviewResponse {
+	var reviewedAtValue *time.Time
+	if reviewedAt.Valid {
+		reviewedAtValue = &reviewedAt.Time
+	}
+
+	var reviewedUntilValue *time.Time
+	if reviewedUntil.Valid {
+		reviewedUntilValue = &reviewedUntil.Time
+	}
+
+	var reviewedByValue *string
+	if reviewedBy.Valid {
+		reviewedByValue = &reviewedBy.String
+	}
+
+	return reviewResponse{
+		ReviewedAt:    reviewedAtValue,
+		ReviewedUntil: reviewedUntilValue,
+		ReviewedBy:    reviewedByValue,
+		IsReviewed:    reviewedUntil.Valid && reviewedUntil.Time.After(time.Now()),
+	}
 }
 
 func newActionResponse(action db.CustomerAction) actionResponse {

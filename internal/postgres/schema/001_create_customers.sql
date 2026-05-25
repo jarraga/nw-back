@@ -15,6 +15,9 @@ CREATE TABLE customers (
   monthly_fee INT NOT NULL,
   billing_started_at DATE NOT NULL,
   comments TEXT NOT NULL DEFAULT '',
+  reviewed_at TIMESTAMPTZ,
+  reviewed_until TIMESTAMPTZ,
+  reviewed_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

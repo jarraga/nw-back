@@ -149,6 +149,9 @@ type Customer struct {
 	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
+	ReviewedAt       pgtype.Timestamptz
+	ReviewedUntil    pgtype.Timestamptz
+	ReviewedBy       pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 }
 

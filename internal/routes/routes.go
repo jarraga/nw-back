@@ -40,6 +40,8 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/{customerID}", customersHandler.Detail)
 	router.Patch("/customers/{customerID}", customersHandler.Update)
 	router.Patch("/customers/{customerID}/comments", customersHandler.UpdateComments)
+	router.Patch("/customers/{customerID}/review", customersHandler.Review)
+	router.Delete("/customers/{customerID}/review", customersHandler.ClearReview)
 	router.Post("/customers/{customerID}/actions", customersHandler.CreateAction)
 	router.Patch("/customers/{customerID}/actions/{actionID}/comments", customersHandler.UpdateActionComments)
 	router.Delete("/customers/{customerID}/actions/{actionID}", customersHandler.DeleteAction)

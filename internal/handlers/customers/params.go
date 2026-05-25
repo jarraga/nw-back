@@ -26,13 +26,14 @@ type debtParams struct {
 }
 
 type debtListParams struct {
-	dueDay        int
-	sortBy        string
-	sortDirection string
-	companyName   string
-	companyTypes  []string
-	limit         int
-	offset        int
+	dueDay          int
+	sortBy          string
+	sortDirection   string
+	companyName     string
+	companyTypes    []string
+	includeReviewed bool
+	limit           int
+	offset          int
 }
 
 type monthlyDelinquencyParams struct {
@@ -111,15 +112,20 @@ func parseDebtListParams(r *http.Request) (debtListParams, error) {
 	}
 
 	companyName := strings.TrimSpace(r.URL.Query().Get("companyName"))
+	includeReviewed, err := queryBool(r, "includeReviewed", false)
+	if err != nil {
+		return debtListParams{}, err
+	}
 
 	return debtListParams{
-		dueDay:        debt.dueDay,
-		sortBy:        sortBy,
-		sortDirection: sortDirection,
-		companyName:   companyName,
-		companyTypes:  companyTypes,
-		limit:         list.limit,
-		offset:        list.offset,
+		dueDay:          debt.dueDay,
+		sortBy:          sortBy,
+		sortDirection:   sortDirection,
+		companyName:     companyName,
+		companyTypes:    companyTypes,
+		includeReviewed: includeReviewed,
+		limit:           list.limit,
+		offset:          list.offset,
 	}, nil
 }
 
@@ -275,4 +281,18 @@ func queryInt(r *http.Request, key string, fallback int) (int, error) {
 	}
 
 	return number, nil
+}
+
+func queryBool(r *http.Request, key string, fallback bool) (bool, error) {
+	value := r.URL.Query().Get(key)
+	if value == "" {
+		return fallback, nil
+	}
+
+	boolean, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s must be true or false", key)
+	}
+
+	return boolean, nil
 }

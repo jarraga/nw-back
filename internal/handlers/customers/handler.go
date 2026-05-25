@@ -84,13 +84,14 @@ func (h *Handler) DebtList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	customers, err := h.queries.ListCustomersDebt(r.Context(), db.ListCustomersDebtParams{
-		DueDay:        int32(params.dueDay),
-		SortBy:        params.sortBy,
-		SortDirection: params.sortDirection,
-		CompanyName:   params.companyName,
-		Limit:         int32(params.limit),
-		Offset:        int32(params.offset),
-		CompanyTypes:  params.companyTypes,
+		DueDay:          int32(params.dueDay),
+		SortBy:          params.sortBy,
+		SortDirection:   params.sortDirection,
+		CompanyName:     params.companyName,
+		Limit:           int32(params.limit),
+		Offset:          int32(params.offset),
+		CompanyTypes:    params.companyTypes,
+		IncludeReviewed: params.includeReviewed,
 	})
 	if err != nil {
 		http.Error(w, "failed to list customers debt", http.StatusInternalServerError)
@@ -98,8 +99,9 @@ func (h *Handler) DebtList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	total, err := h.queries.CountCustomersDebt(r.Context(), db.CountCustomersDebtParams{
-		CompanyTypes: params.companyTypes,
-		CompanyName:  params.companyName,
+		CompanyTypes:    params.companyTypes,
+		CompanyName:     params.companyName,
+		IncludeReviewed: params.includeReviewed,
 	})
 	if err != nil {
 		http.Error(w, "failed to count customers debt", http.StatusInternalServerError)

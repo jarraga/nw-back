@@ -8,6 +8,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 FROM customers
 ORDER BY id
@@ -28,6 +31,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 FROM customers
 WHERE id = sqlc.arg('id');
@@ -45,6 +51,9 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at;
 
 -- name: UpdateCustomerContact :one
@@ -63,6 +72,9 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at;
 
 -- name: CreateCustomer :one
@@ -92,6 +104,51 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at;
+
+-- name: MarkCustomerReviewed :one
+UPDATE customers
+SET
+  reviewed_at = NOW(),
+  reviewed_until = NOW() + (sqlc.arg('days')::int * INTERVAL '1 day'),
+  reviewed_by = NULLIF(BTRIM(sqlc.arg('reviewed_by')::text), '')
+WHERE id = sqlc.arg('id')
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at;
+
+-- name: ClearCustomerReview :one
+UPDATE customers
+SET
+  reviewed_at = NULL,
+  reviewed_until = NULL,
+  reviewed_by = NULL
+WHERE id = sqlc.arg('id')
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at;
 
 -- name: ListCustomersDebt :many
@@ -103,6 +160,9 @@ WITH customer_debts AS (
     c.monthly_fee,
     c.billing_started_at,
     c.comments,
+    c.reviewed_at,
+    c.reviewed_until,
+    c.reviewed_by,
     COUNT(overdue_months.month_date)::int AS overdue_months,
     COALESCE(SUM(c.monthly_fee), 0)::bigint AS overdue_amount
   FROM customers c
@@ -139,6 +199,12 @@ WITH customer_debts AS (
       sqlc.arg('company_name')::text = ''
       OR c.company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
     )
+    AND (
+      sqlc.arg('include_reviewed')::boolean
+      OR
+      c.reviewed_until IS NULL
+      OR c.reviewed_until <= NOW()
+    )
   GROUP BY c.id
 )
 SELECT
@@ -148,6 +214,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   overdue_months,
   overdue_amount
 FROM customer_debts
@@ -172,4 +241,10 @@ WHERE (
   AND (
     sqlc.arg('company_name')::text = ''
     OR c.company_name ILIKE '%' || sqlc.arg('company_name')::text || '%'
+  )
+  AND (
+    sqlc.arg('include_reviewed')::boolean
+    OR
+    c.reviewed_until IS NULL
+    OR c.reviewed_until <= NOW()
   );

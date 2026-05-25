@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearCustomerReview = `-- name: ClearCustomerReview :one
+UPDATE customers
+SET
+  reviewed_at = NULL,
+  reviewed_until = NULL,
+  reviewed_by = NULL
+WHERE id = $1
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at
+`
+
+func (q *Queries) ClearCustomerReview(ctx context.Context, id int64) (Customer, error) {
+	row := q.db.QueryRow(ctx, clearCustomerReview, id)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const countCustomers = `-- name: CountCustomers :one
 SELECT COUNT(*)::int
 FROM customers
@@ -34,15 +76,22 @@ WHERE (
     $2::text = ''
     OR c.company_name ILIKE '%' || $2::text || '%'
   )
+  AND (
+    $3::boolean
+    OR
+    c.reviewed_until IS NULL
+    OR c.reviewed_until <= NOW()
+  )
 `
 
 type CountCustomersDebtParams struct {
-	CompanyTypes []string
-	CompanyName  string
+	CompanyTypes    []string
+	CompanyName     string
+	IncludeReviewed bool
 }
 
 func (q *Queries) CountCustomersDebt(ctx context.Context, arg CountCustomersDebtParams) (int32, error) {
-	row := q.db.QueryRow(ctx, countCustomersDebt, arg.CompanyTypes, arg.CompanyName)
+	row := q.db.QueryRow(ctx, countCustomersDebt, arg.CompanyTypes, arg.CompanyName, arg.IncludeReviewed)
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -75,6 +124,9 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 `
 
@@ -108,6 +160,9 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -123,6 +178,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 FROM customers
 WHERE id = $1
@@ -140,6 +198,9 @@ func (q *Queries) GetCustomer(ctx context.Context, id int64) (Customer, error) {
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -155,6 +216,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 FROM customers
 ORDER BY id
@@ -185,6 +249,9 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
 			&i.Comments,
+			&i.ReviewedAt,
+			&i.ReviewedUntil,
+			&i.ReviewedBy,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -206,6 +273,9 @@ WITH customer_debts AS (
     c.monthly_fee,
     c.billing_started_at,
     c.comments,
+    c.reviewed_at,
+    c.reviewed_until,
+    c.reviewed_by,
     COUNT(overdue_months.month_date)::int AS overdue_months,
     COALESCE(SUM(c.monthly_fee), 0)::bigint AS overdue_amount
   FROM customers c
@@ -242,6 +312,12 @@ WITH customer_debts AS (
       $7::text = ''
       OR c.company_name ILIKE '%' || $7::text || '%'
     )
+    AND (
+      $8::boolean
+      OR
+      c.reviewed_until IS NULL
+      OR c.reviewed_until <= NOW()
+    )
   GROUP BY c.id
 )
 SELECT
@@ -251,6 +327,9 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   overdue_months,
   overdue_amount
 FROM customer_debts
@@ -267,13 +346,14 @@ OFFSET $3
 `
 
 type ListCustomersDebtParams struct {
-	SortBy        string
-	SortDirection string
-	Offset        int32
-	Limit         int32
-	DueDay        int32
-	CompanyTypes  []string
-	CompanyName   string
+	SortBy          string
+	SortDirection   string
+	Offset          int32
+	Limit           int32
+	DueDay          int32
+	CompanyTypes    []string
+	CompanyName     string
+	IncludeReviewed bool
 }
 
 type ListCustomersDebtRow struct {
@@ -283,6 +363,9 @@ type ListCustomersDebtRow struct {
 	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
+	ReviewedAt       pgtype.Timestamptz
+	ReviewedUntil    pgtype.Timestamptz
+	ReviewedBy       pgtype.Text
 	OverdueMonths    int32
 	OverdueAmount    int64
 }
@@ -296,6 +379,7 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 		arg.DueDay,
 		arg.CompanyTypes,
 		arg.CompanyName,
+		arg.IncludeReviewed,
 	)
 	if err != nil {
 		return nil, err
@@ -311,6 +395,9 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
 			&i.Comments,
+			&i.ReviewedAt,
+			&i.ReviewedUntil,
+			&i.ReviewedBy,
 			&i.OverdueMonths,
 			&i.OverdueAmount,
 		); err != nil {
@@ -322,6 +409,54 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const markCustomerReviewed = `-- name: MarkCustomerReviewed :one
+UPDATE customers
+SET
+  reviewed_at = NOW(),
+  reviewed_until = NOW() + ($1::int * INTERVAL '1 day'),
+  reviewed_by = NULLIF(BTRIM($2::text), '')
+WHERE id = $3
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at
+`
+
+type MarkCustomerReviewedParams struct {
+	Days       int32
+	ReviewedBy string
+	ID         int64
+}
+
+func (q *Queries) MarkCustomerReviewed(ctx context.Context, arg MarkCustomerReviewedParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, markCustomerReviewed, arg.Days, arg.ReviewedBy, arg.ID)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const updateCustomerComments = `-- name: UpdateCustomerComments :one
@@ -337,6 +472,9 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 `
 
@@ -357,6 +495,9 @@ func (q *Queries) UpdateCustomerComments(ctx context.Context, arg UpdateCustomer
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -378,6 +519,9 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
   created_at
 `
 
@@ -405,6 +549,9 @@ func (q *Queries) UpdateCustomerContact(ctx context.Context, arg UpdateCustomerC
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
 		&i.CreatedAt,
 	)
 	return i, err
