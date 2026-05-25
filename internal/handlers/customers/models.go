@@ -40,6 +40,20 @@ type debtListResponse struct {
 	OverdueAmount    float64        `json:"overdueAmount"`
 }
 
+type createActionRequest struct {
+	Type     string `json:"type"`
+	Comments string `json:"comments"`
+}
+
+type actionResponse struct {
+	ID         int64                 `json:"id"`
+	CustomerID int64                 `json:"customerID"`
+	Type       db.CustomerActionType `json:"type"`
+	Comments   string                `json:"comments"`
+	ActionDate time.Time             `json:"actionDate"`
+	CreatedAt  time.Time             `json:"createdAt"`
+}
+
 func newListResponse(customers []db.Customer) ([]response, error) {
 	items := make([]response, 0, len(customers))
 
@@ -124,4 +138,15 @@ func newPaginatedDebtListResponse(customers []db.ListCustomersDebtRow, total int
 		Items: items,
 		Total: total,
 	}, nil
+}
+
+func newActionResponse(action db.CustomerAction) actionResponse {
+	return actionResponse{
+		ID:         action.ID,
+		CustomerID: action.CustomerID,
+		Type:       action.Type,
+		Comments:   action.Comments,
+		ActionDate: action.ActionDate.Time,
+		CreatedAt:  action.CreatedAt.Time,
+	}
 }

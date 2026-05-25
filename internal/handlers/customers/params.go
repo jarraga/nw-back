@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"nw-back/internal/postgres/db"
+
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -154,6 +158,38 @@ func parseCompanyTypes(r *http.Request) ([]string, error) {
 	}
 
 	return companyTypes, nil
+}
+
+func parseCustomerID(r *http.Request) (int64, error) {
+	value := chi.URLParam(r, "customerID")
+	if value == "" {
+		return 0, fmt.Errorf("customerID is required")
+	}
+
+	customerID, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("customerID must be a number")
+	}
+
+	if customerID <= 0 {
+		return 0, fmt.Errorf("customerID must be greater than 0")
+	}
+
+	return customerID, nil
+}
+
+func parseCustomerActionType(value string) (db.CustomerActionType, error) {
+	actionType := db.CustomerActionType(strings.TrimSpace(value))
+
+	switch actionType {
+	case db.CustomerActionTypeCall,
+		db.CustomerActionTypeEmail,
+		db.CustomerActionTypePersonalVisit,
+		db.CustomerActionTypeOther:
+		return actionType, nil
+	default:
+		return "", fmt.Errorf("type must be call, email, personal_visit or other")
+	}
 }
 
 func queryInt(r *http.Request, key string, fallback int) (int, error) {
