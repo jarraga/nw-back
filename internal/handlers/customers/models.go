@@ -56,6 +56,13 @@ type createActionRequest struct {
 	Comments string `json:"comments"`
 }
 
+type createPaymentRequest struct {
+	Year   int32   `json:"year"`
+	Month  int32   `json:"month"`
+	Status string  `json:"status"`
+	PaidAt *string `json:"paidAt"`
+}
+
 type actionResponse struct {
 	ID         int64                 `json:"id"`
 	CustomerID int64                 `json:"customerID"`

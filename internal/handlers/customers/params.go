@@ -205,6 +205,22 @@ func parseCustomerActionType(value string) (db.CustomerActionType, error) {
 	}
 }
 
+func parsePaymentStatus(value string) (db.PaymentStatus, error) {
+	if strings.TrimSpace(value) == "" {
+		return db.PaymentStatusPaid, nil
+	}
+
+	status := db.PaymentStatus(strings.TrimSpace(value))
+
+	switch status {
+	case db.PaymentStatusPending,
+		db.PaymentStatusPaid:
+		return status, nil
+	default:
+		return "", fmt.Errorf("status must be pending or paid")
+	}
+}
+
 func queryInt(r *http.Request, key string, fallback int) (int, error) {
 	value := r.URL.Query().Get(key)
 	if value == "" {
