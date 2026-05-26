@@ -22,6 +22,7 @@ type Config struct {
 	OverdueAgeBuckets            []OverdueAgeBucket
 	DataFromYear                 int
 	CustomerStartVariationMonths int
+	ReviewedCustomersPercentage  int
 	EnterpriseCompanyWeight      int
 	PymeCompanyWeight            int
 	StartupCompanyWeight         int
@@ -38,6 +39,7 @@ var config = Config{
 	DueDay:                       10,
 	DataFromYear:                 2024,
 	CustomerStartVariationMonths: 6,
+	ReviewedCustomersPercentage:  20,
 
 	// Company type distribution
 	EnterpriseCompanyWeight: 20,

@@ -40,6 +40,11 @@ func Run(ctx context.Context) error {
 		return err
 	}
 
+	customers, err = markReviewedDebtorCustomers(ctx, queries, customers, config)
+	if err != nil {
+		return err
+	}
+
 	err = createCustomerActions(ctx, queries, customers)
 	if err != nil {
 		return err
@@ -68,6 +73,64 @@ func createCustomers(ctx context.Context, queries *db.Queries, config Config) ([
 
 	log.Printf("%d customers created", config.ActiveCustomers)
 	return customers, nil
+}
+
+func markReviewedDebtorCustomers(ctx context.Context, queries *db.Queries, customers []db.Customer, config Config) ([]db.Customer, error) {
+	if config.ReviewedCustomersPercentage <= 0 {
+		return customers, nil
+	}
+
+	reviewedCustomers := 0
+
+	for index, customer := range customers {
+		debt, err := queries.GetCustomerDebtSummary(ctx, db.GetCustomerDebtSummaryParams{
+			DueDay:     int32(config.DueDay),
+			CustomerID: customer.ID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if debt.OverdueAmount == 0 {
+			continue
+		}
+
+		if gofakeit.Number(1, 100) > config.ReviewedCustomersPercentage {
+			continue
+		}
+
+		reviewedCustomer, err := queries.MarkCustomerReviewed(ctx, db.MarkCustomerReviewedParams{
+			ID:         customer.ID,
+			Days:       int32(gofakeit.Number(5, 10)),
+			ReviewedBy: randomReviewerName(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		customers[index] = reviewedCustomer
+		reviewedCustomers++
+	}
+
+	log.Printf("%d debtor customers marked as reviewed", reviewedCustomers)
+	return customers, nil
+}
+
+func randomReviewerName() string {
+	names := []string{
+		"Martina Alvarez",
+		"Lucas Pereyra",
+		"Valentina Sosa",
+		"Nicolas Romero",
+		"Camila Herrera",
+		"Federico Molina",
+		"Agustina Medina",
+		"Joaquin Navarro",
+		"Florencia Rivas",
+		"Matias Cabrera",
+	}
+
+	return names[gofakeit.Number(0, len(names)-1)]
 }
 
 func randomCustomer(config Config) (db.CreateCustomerParams, error) {
