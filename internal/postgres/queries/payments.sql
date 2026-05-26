@@ -215,6 +215,38 @@ FROM active_customers
 LEFT JOIN overdue_customers
   ON overdue_customers.id = active_customers.id;
 
+-- name: GetReviewedDebtorsPercentage :one
+WITH debtor_customers AS (
+  SELECT
+    c.id,
+    c.reviewed_until
+  FROM customers c
+  WHERE c.deactivated = FALSE
+    AND EXISTS (
+      SELECT 1
+      FROM generate_series(
+        date_trunc('month', c.billing_started_at)::date,
+        date_trunc('month', CURRENT_DATE)::date - INTERVAL '1 month',
+        INTERVAL '1 month'
+      ) AS month_date
+      LEFT JOIN customer_payments cp
+        ON cp.customer_id = c.id
+       AND cp.year = EXTRACT(YEAR FROM month_date)::int
+       AND cp.month = EXTRACT(MONTH FROM month_date)::int
+      WHERE cp.id IS NULL
+        OR cp.status <> 'paid'
+    )
+)
+SELECT
+  COALESCE(
+    COUNT(*) FILTER (
+      WHERE reviewed_until IS NOT NULL
+        AND reviewed_until > NOW()
+    )::double precision * 100 / NULLIF(COUNT(*), 0),
+    0
+  )::double precision AS reviewed_debtors_percentage
+FROM debtor_customers;
+
 -- name: GetCustomerMetrics :many
 WITH company_types AS (
   SELECT unnest(enum_range(NULL::company_type)) AS company_type

@@ -38,6 +38,7 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/delinquency-rate", customersHandler.DelinquencyRate)
 	router.Get("/customers/monthly-delinquency", customersHandler.MonthlyDelinquency)
 	router.Get("/customers/metrics", customersHandler.Metrics)
+	router.Get("/customers/reviewed-debtors-percentage", customersHandler.ReviewedDebtorsPercentage)
 	router.Get("/customers/{customerID:[0-9]+}", customersHandler.Detail)
 	router.Patch("/customers/{customerID:[0-9]+}", customersHandler.Update)
 	router.Patch("/customers/{customerID:[0-9]+}/deactivated", customersHandler.UpdateDeactivated)

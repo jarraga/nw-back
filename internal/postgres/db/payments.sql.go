@@ -506,6 +506,46 @@ func (q *Queries) GetMonthlyDelinquencyRate(ctx context.Context, arg GetMonthlyD
 	return items, nil
 }
 
+const getReviewedDebtorsPercentage = `-- name: GetReviewedDebtorsPercentage :one
+WITH debtor_customers AS (
+  SELECT
+    c.id,
+    c.reviewed_until
+  FROM customers c
+  WHERE c.deactivated = FALSE
+    AND EXISTS (
+      SELECT 1
+      FROM generate_series(
+        date_trunc('month', c.billing_started_at)::date,
+        date_trunc('month', CURRENT_DATE)::date - INTERVAL '1 month',
+        INTERVAL '1 month'
+      ) AS month_date
+      LEFT JOIN customer_payments cp
+        ON cp.customer_id = c.id
+       AND cp.year = EXTRACT(YEAR FROM month_date)::int
+       AND cp.month = EXTRACT(MONTH FROM month_date)::int
+      WHERE cp.id IS NULL
+        OR cp.status <> 'paid'
+    )
+)
+SELECT
+  COALESCE(
+    COUNT(*) FILTER (
+      WHERE reviewed_until IS NOT NULL
+        AND reviewed_until > NOW()
+    )::double precision * 100 / NULLIF(COUNT(*), 0),
+    0
+  )::double precision AS reviewed_debtors_percentage
+FROM debtor_customers
+`
+
+func (q *Queries) GetReviewedDebtorsPercentage(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, getReviewedDebtorsPercentage)
+	var reviewed_debtors_percentage float64
+	err := row.Scan(&reviewed_debtors_percentage)
+	return reviewed_debtors_percentage, err
+}
+
 const getTotalCustomerDebt = `-- name: GetTotalCustomerDebt :one
 WITH customer_months AS (
   SELECT

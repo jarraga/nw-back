@@ -78,3 +78,18 @@ func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) ReviewedDebtorsPercentage(w http.ResponseWriter, r *http.Request) {
+	percentage, err := h.queries.GetReviewedDebtorsPercentage(r.Context())
+	if err != nil {
+		http.Error(w, "failed to get reviewed debtors percentage", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(percentage)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
