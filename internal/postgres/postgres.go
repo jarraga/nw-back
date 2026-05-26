@@ -45,12 +45,13 @@ func Close() {
 
 func databaseURL() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		env("PGUSER", "postgres"),
 		env("PGPASSWORD", ""),
 		env("PGHOST", "localhost"),
 		env("PGPORT", "5432"),
 		env("PGDATABASE", "postgres"),
+		env("PGSSLMODE", "disable"),
 	)
 }
 
