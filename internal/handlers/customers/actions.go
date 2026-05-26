@@ -38,6 +38,7 @@ func (h *Handler) CreateAction(w http.ResponseWriter, r *http.Request) {
 		Type:          actionType,
 		Comments:      strings.TrimSpace(request.Comments),
 		InformantName: newInformantName(request.InformantName),
+		ActionDate:    pgtype.Timestamptz{},
 	})
 	if err != nil {
 		http.Error(w, "failed to create customer action", http.StatusInternalServerError)

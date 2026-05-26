@@ -16,12 +16,14 @@ INSERT INTO customer_actions (
   customer_id,
   type,
   comments,
-  informant_name
+  informant_name,
+  action_date
 ) VALUES (
   $1,
   $2,
   $3,
-  $4
+  $4,
+  COALESCE($5::timestamptz, NOW())
 )
 RETURNING
   id,
@@ -38,6 +40,7 @@ type CreateCustomerActionParams struct {
 	Type          CustomerActionType
 	Comments      string
 	InformantName pgtype.Text
+	ActionDate    pgtype.Timestamptz
 }
 
 func (q *Queries) CreateCustomerAction(ctx context.Context, arg CreateCustomerActionParams) (CustomerAction, error) {
@@ -46,6 +49,7 @@ func (q *Queries) CreateCustomerAction(ctx context.Context, arg CreateCustomerAc
 		arg.Type,
 		arg.Comments,
 		arg.InformantName,
+		arg.ActionDate,
 	)
 	var i CustomerAction
 	err := row.Scan(

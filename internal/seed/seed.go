@@ -40,6 +40,11 @@ func Run(ctx context.Context) error {
 		return err
 	}
 
+	err = createCustomerActions(ctx, queries, customers)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -80,8 +85,25 @@ func randomCustomer(config Config) (db.CreateCustomerParams, error) {
 		Email:            gofakeit.Email(),
 		MonthlyFee:       monthlyFee,
 		BillingStartedAt: billingStartedAt,
-		Comments:         "",
+		Comments:         randomCustomerComment(),
 	}, nil
+}
+
+func randomCustomerComment() string {
+	comments := []string{
+		"Cliente con buena predisposicion para resolver consultas administrativas.",
+		"Suele responder mejor por la manana y prefiere mensajes breves.",
+		"Empresa con crecimiento reciente y necesidades operativas cambiantes.",
+		"Contacto principal atento, aunque requiere seguimiento para cerrar temas.",
+		"Cliente sensible a cambios de precio y condiciones comerciales.",
+		"Cuenta con procesos internos formales para aprobar pagos y novedades.",
+		"Prefiere centralizar la comunicacion en una sola persona del equipo.",
+		"Cliente historico con uso estable del servicio contratado.",
+		"Necesita recordatorios periodicos para mantener documentacion al dia.",
+		"Empresa con buena relacion comercial y baja friccion operativa.",
+	}
+
+	return comments[gofakeit.Number(0, len(comments)-1)]
 }
 
 func randomCompanyType(config Config) db.CompanyType {

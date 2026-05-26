@@ -3,12 +3,14 @@ INSERT INTO customer_actions (
   customer_id,
   type,
   comments,
-  informant_name
+  informant_name,
+  action_date
 ) VALUES (
   sqlc.arg('customer_id'),
   sqlc.arg('type'),
   sqlc.arg('comments'),
-  sqlc.narg('informant_name')
+  sqlc.narg('informant_name'),
+  COALESCE(sqlc.narg('action_date')::timestamptz, NOW())
 )
 RETURNING
   id,
