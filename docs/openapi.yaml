@@ -1,0 +1,974 @@
+openapi: 3.0.3
+info:
+  title: NW Back API
+  version: 1.0.0
+  description: API for customer billing, debt tracking, reviews, payments, actions, and viewer presence.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Health
+  - name: Customers
+  - name: Debt
+  - name: Metrics
+  - name: Reviews
+  - name: Payments
+  - name: Actions
+  - name: Presence
+
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: API is running.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /ws/customer-viewers:
+    get:
+      tags: [Presence]
+      summary: Customer viewer presence websocket
+      description: WebSocket endpoint used to report which user is viewing a customer and to receive viewer presence updates.
+      x-websocket: true
+      responses:
+        "101":
+          description: Switching protocols.
+
+  /customers:
+    get:
+      tags: [Customers]
+      summary: List active customers
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Paginated active customers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedCustomers"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags: [Customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerRequest"
+            example:
+              companyName: Acme Corp
+              companyType: pyme
+              phone: "+54 11 5555-1234"
+              email: billing@acme.test
+              monthlyFee: 12000
+              billingStartedAt: "2025-01-01"
+              comments: Prefiere contacto por email.
+      responses:
+        "201":
+          description: Customer created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/debt:
+    get:
+      tags: [Debt]
+      summary: Get total overdue debt
+      parameters:
+        - $ref: "#/components/parameters/DueDay"
+      responses:
+        "200":
+          description: Total overdue debt across active customers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebtTotal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/debt-list:
+    get:
+      tags: [Debt]
+      summary: List customers with debt data
+      parameters:
+        - $ref: "#/components/parameters/DueDay"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [amount, months]
+            default: amount
+        - name: sortDirection
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: companyName
+          in: query
+          schema:
+            type: string
+        - name: companyType
+          in: query
+          description: Can be repeated or passed as comma-separated values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/CompanyType"
+        - name: includeReviewed
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Paginated customers with debt totals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedDebtList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/delinquency-rate:
+    get:
+      tags: [Metrics]
+      summary: Get current delinquency rate
+      parameters:
+        - $ref: "#/components/parameters/DueDay"
+      responses:
+        "200":
+          description: Current delinquency rate for active customers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelinquencyRate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/monthly-delinquency:
+    get:
+      tags: [Metrics]
+      summary: Get monthly delinquency percentages for a year
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2100
+          example: 2026
+        - $ref: "#/components/parameters/DueDay"
+      responses:
+        "200":
+          description: Monthly delinquency series.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyDelinquency"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/metrics:
+    get:
+      tags: [Metrics]
+      summary: Get dashboard metrics
+      parameters:
+        - $ref: "#/components/parameters/DueDay"
+      responses:
+        "200":
+          description: Customer and debtor metrics grouped by company type.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerMetrics"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/reviewed-debtors-percentage:
+    get:
+      tags: [Metrics]
+      summary: Get percentage of debtors with active review
+      description: Returns a raw number. The denominator is active debtor customers only; review is active when reviewedUntil is in the future.
+      responses:
+        "200":
+          description: Percentage of debtor customers with an active review.
+          content:
+            application/json:
+              schema:
+                type: number
+                format: double
+              example: 37.5
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    get:
+      tags: [Customers]
+      summary: Get customer detail
+      parameters:
+        - $ref: "#/components/parameters/DueDay"
+      responses:
+        "200":
+          description: Customer detail with recent actions, payments, debt, and payment behavior.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      tags: [Customers]
+      summary: Update customer contact and monthly fee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerRequest"
+            example:
+              phone: "+54 11 5555-4321"
+              email: admin@acme.test
+              monthlyFee: 13500
+      responses:
+        "200":
+          description: Updated customer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/deactivated:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    patch:
+      tags: [Customers]
+      summary: Activate or deactivate a customer
+      description: Deactivated customers are excluded from lists, debt, and metrics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerDeactivatedRequest"
+            example:
+              deactivated: true
+      responses:
+        "200":
+          description: Updated customer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/comments:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    patch:
+      tags: [Customers]
+      summary: Update customer comments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentsRequest"
+            example:
+              comments: Revisar nuevamente luego del cierre administrativo.
+      responses:
+        "200":
+          description: Updated customer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/review:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    patch:
+      tags: [Reviews]
+      summary: Mark customer as reviewed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewCustomerRequest"
+            example:
+              days: 3
+              reviewedBy: Martina Alvarez
+      responses:
+        "200":
+          description: Updated customer with active review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags: [Reviews]
+      summary: Clear customer review
+      responses:
+        "200":
+          description: Updated customer without review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/payments:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    post:
+      tags: [Payments]
+      summary: Register a customer payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentRequest"
+            example:
+              year: 2026
+              month: 5
+              status: paid
+              paidAt: "2026-05-15T12:30:00Z"
+      responses:
+        "201":
+          description: Payment created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Payment already exists for the customer, year, and month.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/actions:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+    post:
+      tags: [Actions]
+      summary: Create a customer action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateActionRequest"
+            example:
+              type: call
+              comments: Se dejo constancia del reclamo de pago.
+              informantName: Laura Martinez
+      responses:
+        "201":
+          description: Action created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/actions/{actionID}/comments:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+      - $ref: "#/components/parameters/ActionID"
+    patch:
+      tags: [Actions]
+      summary: Update customer action comments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentsRequest"
+            example:
+              comments: Se actualizo el comentario de la gestion.
+      responses:
+        "200":
+          description: Updated action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /customers/{customerID}/actions/{actionID}:
+    parameters:
+      - $ref: "#/components/parameters/CustomerID"
+      - $ref: "#/components/parameters/ActionID"
+    delete:
+      tags: [Actions]
+      summary: Delete a customer action
+      responses:
+        "204":
+          description: Action deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  parameters:
+    CustomerID:
+      name: customerID
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ActionID:
+      name: actionID
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    DueDay:
+      name: dueDay
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 31
+        default: 10
+
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        text/plain:
+          schema:
+            type: string
+    NotFound:
+      description: Resource not found.
+      content:
+        text/plain:
+          schema:
+            type: string
+    InternalServerError:
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+
+  schemas:
+    CompanyType:
+      type: string
+      enum: [enterprise, pyme, startup]
+
+    PaymentStatus:
+      type: string
+      enum: [pending, paid]
+
+    ActionType:
+      type: string
+      enum: [call, email, personal_visit, other]
+
+    Review:
+      type: object
+      required: [reviewedAt, reviewedUntil, reviewedBy, isReviewed]
+      properties:
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedUntil:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: string
+          nullable: true
+        isReviewed:
+          type: boolean
+
+    Customer:
+      type: object
+      required:
+        - id
+        - companyName
+        - companyType
+        - phone
+        - email
+        - monthlyFee
+        - billingStartedAt
+        - comments
+        - deactivated
+        - review
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+        companyName:
+          type: string
+        companyType:
+          $ref: "#/components/schemas/CompanyType"
+        phone:
+          type: string
+        email:
+          type: string
+        monthlyFee:
+          type: integer
+          format: int32
+        billingStartedAt:
+          type: string
+          format: date-time
+        comments:
+          type: string
+        deactivated:
+          type: boolean
+        review:
+          $ref: "#/components/schemas/Review"
+        createdAt:
+          type: string
+          format: date-time
+
+    DebtListCustomer:
+      allOf:
+        - $ref: "#/components/schemas/Customer"
+        - type: object
+          required: [overdueMonths, overdueAmount]
+          properties:
+            overdueMonths:
+              type: integer
+              format: int32
+            overdueAmount:
+              type: integer
+              format: int64
+
+    PaginatedCustomers:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+          format: int32
+
+    PaginatedDebtList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DebtListCustomer"
+        total:
+          type: integer
+          format: int32
+
+    DebtTotal:
+      type: object
+      required: [totalDebt]
+      properties:
+        totalDebt:
+          type: integer
+          format: int64
+
+    CustomerDebt:
+      type: object
+      required: [dueDay, overdueMonths, overdueAmount]
+      properties:
+        dueDay:
+          type: integer
+          format: int32
+        overdueMonths:
+          type: integer
+          format: int32
+        overdueAmount:
+          type: integer
+          format: int64
+
+    CustomerBehavior:
+      type: object
+      required: [invoices, paidOnTime, paidLate, latePaymentPercentage, averageLateDays]
+      properties:
+        invoices:
+          type: integer
+          format: int32
+        paidOnTime:
+          type: integer
+          format: int32
+        paidLate:
+          type: integer
+          format: int32
+        latePaymentPercentage:
+          type: number
+          format: double
+        averageLateDays:
+          type: number
+          format: double
+
+    Payment:
+      type: object
+      required: [id, customerID, year, month, status, paidAt, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        customerID:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          format: int32
+        month:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Action:
+      type: object
+      required: [id, customerID, type, comments, informantName, actionDate, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        customerID:
+          type: integer
+          format: int64
+        type:
+          $ref: "#/components/schemas/ActionType"
+        comments:
+          type: string
+        informantName:
+          type: string
+          nullable: true
+        actionDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CustomerDetail:
+      type: object
+      required: [customer, actions, payments, debt, behavior]
+      properties:
+        customer:
+          $ref: "#/components/schemas/Customer"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Action"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        debt:
+          $ref: "#/components/schemas/CustomerDebt"
+        behavior:
+          $ref: "#/components/schemas/CustomerBehavior"
+
+    DelinquencyRate:
+      type: object
+      required: [dueDay, totalCustomers, overdueCustomers, delinquencyPercentage]
+      properties:
+        dueDay:
+          type: integer
+          format: int32
+        totalCustomers:
+          type: integer
+          format: int32
+        overdueCustomers:
+          type: integer
+          format: int32
+        delinquencyPercentage:
+          type: number
+          format: double
+
+    MonthlyDelinquency:
+      type: object
+      required: [year, dueDay, items]
+      properties:
+        year:
+          type: integer
+          format: int32
+        dueDay:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyDelinquencyItem"
+
+    MonthlyDelinquencyItem:
+      type: object
+      required: [month, totalCustomers, overdueCustomers, delinquencyPercentage]
+      properties:
+        month:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        totalCustomers:
+          type: integer
+          format: int32
+        overdueCustomers:
+          type: integer
+          format: int32
+        delinquencyPercentage:
+          type: number
+          format: double
+
+    CustomerMetrics:
+      type: object
+      required: [dueDay, totalCustomers, companyTypes, debtors]
+      properties:
+        dueDay:
+          type: integer
+          format: int32
+        totalCustomers:
+          type: integer
+          format: int32
+        companyTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsCompanyType"
+        debtors:
+          $ref: "#/components/schemas/MetricsDebtors"
+
+    MetricsCompanyType:
+      type: object
+      required: [companyType, customers, percentage]
+      properties:
+        companyType:
+          type: string
+        customers:
+          type: integer
+          format: int32
+        percentage:
+          type: number
+          format: double
+
+    MetricsDebtors:
+      type: object
+      required: [customers, percentage, byCompanyType]
+      properties:
+        customers:
+          type: integer
+          format: int32
+        percentage:
+          type: number
+          format: double
+        byCompanyType:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsCompanyType"
+
+    CreateCustomerRequest:
+      type: object
+      required: [companyName, companyType, monthlyFee, billingStartedAt]
+      properties:
+        companyName:
+          type: string
+        companyType:
+          $ref: "#/components/schemas/CompanyType"
+        phone:
+          type: string
+          default: ""
+        email:
+          type: string
+          default: ""
+        monthlyFee:
+          type: integer
+          format: int32
+          minimum: 1
+        billingStartedAt:
+          type: string
+          format: date
+        comments:
+          type: string
+          default: ""
+
+    UpdateCustomerRequest:
+      type: object
+      required: [monthlyFee]
+      properties:
+        phone:
+          type: string
+          default: ""
+        email:
+          type: string
+          default: ""
+        monthlyFee:
+          type: integer
+          format: int32
+          minimum: 1
+
+    UpdateCustomerDeactivatedRequest:
+      type: object
+      required: [deactivated]
+      properties:
+        deactivated:
+          type: boolean
+
+    UpdateCommentsRequest:
+      type: object
+      required: [comments]
+      properties:
+        comments:
+          type: string
+
+    ReviewCustomerRequest:
+      type: object
+      required: [days]
+      properties:
+        days:
+          type: integer
+          format: int32
+          minimum: 1
+        reviewedBy:
+          type: string
+          default: ""
+
+    CreatePaymentRequest:
+      type: object
+      required: [year, month, paidAt]
+      properties:
+        year:
+          type: integer
+          format: int32
+          minimum: 1
+        month:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        paidAt:
+          type: string
+          format: date-time
+
+    CreateActionRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          $ref: "#/components/schemas/ActionType"
+        comments:
+          type: string
+          default: ""
+        informantName:
+          type: string
+          nullable: true
