@@ -54,7 +54,16 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := newDetailResponse(customer, actions, payments, debt, int32(debtParams.dueDay))
+	behavior, err := h.queries.GetCustomerPaymentBehavior(r.Context(), db.GetCustomerPaymentBehaviorParams{
+		DueDay:     int32(debtParams.dueDay),
+		CustomerID: customerID,
+	})
+	if err != nil {
+		http.Error(w, "failed to get customer payment behavior", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := newDetailResponse(customer, actions, payments, debt, behavior, int32(debtParams.dueDay))
 	if err != nil {
 		http.Error(w, "failed to build customer detail response", http.StatusInternalServerError)
 		return

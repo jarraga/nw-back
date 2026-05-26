@@ -324,6 +324,95 @@ func (q *Queries) GetCustomerMetrics(ctx context.Context, dueDay int32) ([]GetCu
 	return items, nil
 }
 
+const getCustomerPaymentBehavior = `-- name: GetCustomerPaymentBehavior :one
+WITH customer_months AS (
+  SELECT
+    c.id AS customer_id,
+    EXTRACT(YEAR FROM month_date)::int AS year,
+    EXTRACT(MONTH FROM month_date)::int AS month,
+    (
+      month_date::date +
+      (
+        LEAST(
+          $1::int,
+          EXTRACT(
+            DAY FROM date_trunc('month', month_date)::date + INTERVAL '1 month - 1 day'
+          )::int
+        ) - 1
+      ) * INTERVAL '1 day'
+    )::date AS due_date
+  FROM customers c
+  CROSS JOIN LATERAL generate_series(
+    date_trunc('month', c.billing_started_at)::date,
+    date_trunc('month', CURRENT_DATE)::date,
+    INTERVAL '1 month'
+  ) AS month_date
+  WHERE c.id = $2
+)
+SELECT
+  COUNT(customer_months.month)::int AS invoices,
+  COUNT(customer_months.month) FILTER (
+    WHERE cp.status = 'paid'
+      AND cp.paid_at::date <= customer_months.due_date
+  )::int AS paid_on_time,
+  COUNT(customer_months.month) FILTER (
+    WHERE cp.id IS NULL
+      OR cp.status <> 'paid'
+      OR cp.paid_at::date > customer_months.due_date
+  )::int AS paid_late,
+  COALESCE(
+    COUNT(customer_months.month) FILTER (
+      WHERE cp.id IS NULL
+        OR cp.status <> 'paid'
+        OR cp.paid_at::date > customer_months.due_date
+    )::double precision * 100 / NULLIF(COUNT(customer_months.month), 0),
+    0
+  )::double precision AS late_payment_percentage,
+  COALESCE(
+    AVG(
+      CASE
+        WHEN cp.status = 'paid' AND cp.paid_at::date > customer_months.due_date
+          THEN (cp.paid_at::date - customer_months.due_date)::double precision
+        WHEN cp.id IS NULL OR cp.status <> 'paid'
+          THEN (CURRENT_DATE - customer_months.due_date)::double precision
+      END
+    ),
+    0
+  )::double precision AS average_late_days
+FROM customer_months
+LEFT JOIN customer_payments cp
+  ON cp.customer_id = customer_months.customer_id
+ AND cp.year = customer_months.year
+ AND cp.month = customer_months.month
+WHERE customer_months.due_date <= CURRENT_DATE
+`
+
+type GetCustomerPaymentBehaviorParams struct {
+	DueDay     int32
+	CustomerID int64
+}
+
+type GetCustomerPaymentBehaviorRow struct {
+	Invoices              int32
+	PaidOnTime            int32
+	PaidLate              int32
+	LatePaymentPercentage float64
+	AverageLateDays       float64
+}
+
+func (q *Queries) GetCustomerPaymentBehavior(ctx context.Context, arg GetCustomerPaymentBehaviorParams) (GetCustomerPaymentBehaviorRow, error) {
+	row := q.db.QueryRow(ctx, getCustomerPaymentBehavior, arg.DueDay, arg.CustomerID)
+	var i GetCustomerPaymentBehaviorRow
+	err := row.Scan(
+		&i.Invoices,
+		&i.PaidOnTime,
+		&i.PaidLate,
+		&i.LatePaymentPercentage,
+		&i.AverageLateDays,
+	)
+	return i, err
+}
+
 const getMonthlyDelinquencyRate = `-- name: GetMonthlyDelinquencyRate :many
 WITH months AS (
   SELECT generate_series(1, 12)::int AS month
