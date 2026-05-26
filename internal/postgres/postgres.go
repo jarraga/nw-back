@@ -11,7 +11,7 @@ import (
 var DB *pgxpool.Pool
 
 func Connect(ctx context.Context) error {
-	config, err := pgxpool.ParseConfig(databaseURL())
+	config, err := Config()
 	if err != nil {
 		return err
 	}
@@ -29,6 +29,10 @@ func Connect(ctx context.Context) error {
 
 	DB = pool
 	return nil
+}
+
+func Config() (*pgxpool.Config, error) {
+	return pgxpool.ParseConfig(databaseURL())
 }
 
 func Close() {

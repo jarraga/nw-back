@@ -1,13 +1,16 @@
-.PHONY: dev seed gen xls
+.PHONY: dev migrate seed gen xls
 
 dev:
-	go run cmd/api/main.go
+	go run ./cmd/migrate up && go run ./cmd/api
+
+migrate:
+	go run ./cmd/migrate up
 
 seed:
-	go run cmd/seed/main.go
+	go run ./cmd/seed
 
 gen:
 	sqlc generate
 
 xls:
-	go run cmd/export-xls/main.go $(if $(OUT),-out $(OUT),)
+	go run ./cmd/export-xls $(if $(OUT),-out $(OUT),)

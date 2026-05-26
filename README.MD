@@ -67,9 +67,16 @@ El archivo `.env` esta ignorado por git.
 ## Ejecutar la aplicacion
 
 Antes de iniciar el servidor HTTP, la aplicacion intenta conectarse a PostgreSQL. Si la conexion falla, se loguea el error y el proceso termina.
+El comando `make dev` aplica las migraciones pendientes y, si todo sale bien, levanta la API.
 
 ```powershell
 make dev
+```
+
+Para inicializar o actualizar solo la estructura de la base de datos:
+
+```powershell
+make migrate
 ```
 
 Endpoint disponible:
