@@ -164,7 +164,7 @@ WITH customer_debts AS (
     c.reviewed_until,
     c.reviewed_by,
     COUNT(overdue_months.month_date)::int AS overdue_months,
-    COALESCE(SUM(c.monthly_fee), 0)::bigint AS overdue_amount
+    (COUNT(overdue_months.month_date) * c.monthly_fee)::bigint AS overdue_amount
   FROM customers c
   LEFT JOIN LATERAL (
     SELECT

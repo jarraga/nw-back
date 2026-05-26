@@ -191,6 +191,139 @@ func (q *Queries) GetCustomerDelinquencyRate(ctx context.Context, dueDay int32) 
 	return i, err
 }
 
+const getCustomerMetrics = `-- name: GetCustomerMetrics :many
+WITH company_types AS (
+  SELECT unnest(enum_range(NULL::company_type)) AS company_type
+),
+customer_totals AS (
+  SELECT COUNT(*)::int AS total_customers
+  FROM customers
+),
+customers_by_type AS (
+  SELECT
+    company_type,
+    COUNT(*)::int AS customers
+  FROM customers
+  GROUP BY company_type
+),
+customer_months AS (
+  SELECT
+    c.id AS customer_id,
+    c.company_type,
+    EXTRACT(YEAR FROM month_date)::int AS year,
+    EXTRACT(MONTH FROM month_date)::int AS month,
+    (
+      month_date::date +
+      (
+        LEAST(
+          $1::int,
+          EXTRACT(
+            DAY FROM date_trunc('month', month_date)::date + INTERVAL '1 month - 1 day'
+          )::int
+        ) - 1
+      ) * INTERVAL '1 day'
+    )::date AS due_date
+  FROM customers c
+  CROSS JOIN LATERAL generate_series(
+    date_trunc('month', c.billing_started_at)::date,
+    date_trunc('month', CURRENT_DATE)::date,
+    INTERVAL '1 month'
+  ) AS month_date
+),
+debtor_customers AS (
+  SELECT DISTINCT
+    customer_months.customer_id,
+    customer_months.company_type
+  FROM customer_months
+  LEFT JOIN customer_payments cp
+    ON cp.customer_id = customer_months.customer_id
+   AND cp.year = customer_months.year
+   AND cp.month = customer_months.month
+  WHERE customer_months.due_date < CURRENT_DATE
+    AND (
+      cp.id IS NULL
+      OR cp.status <> 'paid'
+    )
+),
+debtor_totals AS (
+  SELECT COUNT(*)::int AS customers
+  FROM debtor_customers
+),
+debtors_by_type AS (
+  SELECT
+    company_type,
+    COUNT(*)::int AS customers
+  FROM debtor_customers
+  GROUP BY company_type
+)
+SELECT
+  customer_totals.total_customers,
+  COALESCE(debtor_totals.customers, 0)::int AS debtor_customers,
+  COALESCE(
+    COALESCE(debtor_totals.customers, 0)::double precision * 100 / NULLIF(customer_totals.total_customers, 0),
+    0
+  )::double precision AS debtor_percentage,
+  company_types.company_type::text AS company_type,
+  COALESCE(customers_by_type.customers, 0)::int AS type_customers,
+  COALESCE(
+    COALESCE(customers_by_type.customers, 0)::double precision * 100 / NULLIF(customer_totals.total_customers, 0),
+    0
+  )::double precision AS type_percentage,
+  COALESCE(debtors_by_type.customers, 0)::int AS type_debtor_customers,
+  COALESCE(
+    COALESCE(debtors_by_type.customers, 0)::double precision * 100 / NULLIF(debtor_totals.customers, 0),
+    0
+  )::double precision AS type_debtor_percentage
+FROM company_types
+CROSS JOIN customer_totals
+CROSS JOIN debtor_totals
+LEFT JOIN customers_by_type
+  ON customers_by_type.company_type = company_types.company_type
+LEFT JOIN debtors_by_type
+  ON debtors_by_type.company_type = company_types.company_type
+ORDER BY company_types.company_type
+`
+
+type GetCustomerMetricsRow struct {
+	TotalCustomers       int32
+	DebtorCustomers      int32
+	DebtorPercentage     float64
+	CompanyType          string
+	TypeCustomers        int32
+	TypePercentage       float64
+	TypeDebtorCustomers  int32
+	TypeDebtorPercentage float64
+}
+
+func (q *Queries) GetCustomerMetrics(ctx context.Context, dueDay int32) ([]GetCustomerMetricsRow, error) {
+	rows, err := q.db.Query(ctx, getCustomerMetrics, dueDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCustomerMetricsRow
+	for rows.Next() {
+		var i GetCustomerMetricsRow
+		if err := rows.Scan(
+			&i.TotalCustomers,
+			&i.DebtorCustomers,
+			&i.DebtorPercentage,
+			&i.CompanyType,
+			&i.TypeCustomers,
+			&i.TypePercentage,
+			&i.TypeDebtorCustomers,
+			&i.TypeDebtorPercentage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMonthlyDelinquencyRate = `-- name: GetMonthlyDelinquencyRate :many
 WITH months AS (
   SELECT generate_series(1, 12)::int AS month

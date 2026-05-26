@@ -145,6 +145,25 @@ type delinquencyRateResponse struct {
 	DelinquencyPercentage float64 `json:"delinquencyPercentage"`
 }
 
+type customerMetricsResponse struct {
+	DueDay         int32                        `json:"dueDay"`
+	TotalCustomers int32                        `json:"totalCustomers"`
+	CompanyTypes   []metricsCompanyTypeResponse `json:"companyTypes"`
+	Debtors        metricsDebtorsResponse       `json:"debtors"`
+}
+
+type metricsCompanyTypeResponse struct {
+	CompanyType string  `json:"companyType"`
+	Customers   int32   `json:"customers"`
+	Percentage  float64 `json:"percentage"`
+}
+
+type metricsDebtorsResponse struct {
+	Customers     int32                        `json:"customers"`
+	Percentage    float64                      `json:"percentage"`
+	ByCompanyType []metricsCompanyTypeResponse `json:"byCompanyType"`
+}
+
 func newCustomerResponse(customer db.Customer) (response, error) {
 	return response{
 		ID:               customer.ID,
@@ -349,4 +368,38 @@ func newDelinquencyRateResponse(dueDay int32, row db.GetCustomerDelinquencyRateR
 		OverdueCustomers:      row.OverdueCustomers,
 		DelinquencyPercentage: row.DelinquencyPercentage,
 	}
+}
+
+func newCustomerMetricsResponse(dueDay int32, rows []db.GetCustomerMetricsRow) customerMetricsResponse {
+	response := customerMetricsResponse{
+		DueDay:       dueDay,
+		CompanyTypes: []metricsCompanyTypeResponse{},
+		Debtors: metricsDebtorsResponse{
+			ByCompanyType: []metricsCompanyTypeResponse{},
+		},
+	}
+
+	if len(rows) == 0 {
+		return response
+	}
+
+	response.TotalCustomers = rows[0].TotalCustomers
+	response.Debtors.Customers = rows[0].DebtorCustomers
+	response.Debtors.Percentage = rows[0].DebtorPercentage
+
+	for _, row := range rows {
+		response.CompanyTypes = append(response.CompanyTypes, metricsCompanyTypeResponse{
+			CompanyType: row.CompanyType,
+			Customers:   row.TypeCustomers,
+			Percentage:  row.TypePercentage,
+		})
+
+		response.Debtors.ByCompanyType = append(response.Debtors.ByCompanyType, metricsCompanyTypeResponse{
+			CompanyType: row.CompanyType,
+			Customers:   row.TypeDebtorCustomers,
+			Percentage:  row.TypeDebtorPercentage,
+		})
+	}
+
+	return response
 }

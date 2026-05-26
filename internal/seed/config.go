@@ -38,5 +38,5 @@ var config = Config{
 	EnterprisePaymentDelayFromDays: 0,
 	EnterprisePaymentDelayToDays:   100,
 	GeneralPaymentDelayFromDays:    0,
-	GeneralPaymentDelayToDays:      20,
+	GeneralPaymentDelayToDays:      45,
 }

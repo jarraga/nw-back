@@ -55,3 +55,26 @@ func (h *Handler) DelinquencyRate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
+	params, err := parseDebtParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rows, err := h.queries.GetCustomerMetrics(r.Context(), int32(params.dueDay))
+	if err != nil {
+		http.Error(w, "failed to get customer metrics", http.StatusInternalServerError)
+		return
+	}
+
+	response := newCustomerMetricsResponse(int32(params.dueDay), rows)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
