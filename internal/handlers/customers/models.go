@@ -18,6 +18,7 @@ type response struct {
 	MonthlyFee       int32          `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
 	Comments         string         `json:"comments"`
+	Deactivated      bool           `json:"deactivated"`
 	Review           reviewResponse `json:"review"`
 	CreatedAt        time.Time      `json:"createdAt"`
 }
@@ -38,6 +39,7 @@ type debtListResponse struct {
 	MonthlyFee       int32          `json:"monthlyFee"`
 	BillingStartedAt time.Time      `json:"billingStartedAt"`
 	Comments         string         `json:"comments"`
+	Deactivated      bool           `json:"deactivated"`
 	Review           reviewResponse `json:"review"`
 	OverdueMonths    int32          `json:"overdueMonths"`
 	OverdueAmount    int64          `json:"overdueAmount"`
@@ -78,6 +80,10 @@ type updateCustomerRequest struct {
 	Phone      string      `json:"phone"`
 	Email      string      `json:"email"`
 	MonthlyFee json.Number `json:"monthlyFee"`
+}
+
+type updateCustomerDeactivatedRequest struct {
+	Deactivated bool `json:"deactivated"`
 }
 
 type reviewCustomerRequest struct {
@@ -183,6 +189,7 @@ func newCustomerResponse(customer db.Customer) (response, error) {
 		MonthlyFee:       customer.MonthlyFee,
 		BillingStartedAt: customer.BillingStartedAt.Time,
 		Comments:         customer.Comments,
+		Deactivated:      customer.Deactivated,
 		Review:           newReviewResponse(customer.ReviewedAt, customer.ReviewedUntil, customer.ReviewedBy),
 		CreatedAt:        customer.CreatedAt.Time,
 	}, nil
@@ -232,6 +239,7 @@ func newDebtListResponse(customers []db.ListCustomersDebtRow) ([]debtListRespons
 			MonthlyFee:       customer.MonthlyFee,
 			BillingStartedAt: customer.BillingStartedAt.Time,
 			Comments:         customer.Comments,
+			Deactivated:      customer.Deactivated,
 			Review:           newReviewResponse(customer.ReviewedAt, customer.ReviewedUntil, customer.ReviewedBy),
 			OverdueMonths:    customer.OverdueMonths,
 			OverdueAmount:    customer.OverdueAmount,

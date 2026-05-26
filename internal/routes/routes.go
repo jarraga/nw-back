@@ -40,6 +40,7 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/metrics", customersHandler.Metrics)
 	router.Get("/customers/{customerID:[0-9]+}", customersHandler.Detail)
 	router.Patch("/customers/{customerID:[0-9]+}", customersHandler.Update)
+	router.Patch("/customers/{customerID:[0-9]+}/deactivated", customersHandler.UpdateDeactivated)
 	router.Patch("/customers/{customerID:[0-9]+}/comments", customersHandler.UpdateComments)
 	router.Patch("/customers/{customerID:[0-9]+}/review", customersHandler.Review)
 	router.Delete("/customers/{customerID:[0-9]+}/review", customersHandler.ClearReview)

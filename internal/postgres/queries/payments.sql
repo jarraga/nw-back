@@ -45,6 +45,7 @@ WITH customer_months AS (
     date_trunc('month', CURRENT_DATE)::date,
     INTERVAL '1 month'
   ) AS month_date
+  WHERE c.deactivated = FALSE
 )
 SELECT
   COALESCE(SUM(cm.monthly_fee), 0)::bigint AS total_debt
@@ -164,7 +165,8 @@ WITH active_customers AS (
     id,
     billing_started_at
   FROM customers
-  WHERE date_trunc('month', billing_started_at)::date <= date_trunc('month', CURRENT_DATE)::date
+  WHERE deactivated = FALSE
+    AND date_trunc('month', billing_started_at)::date <= date_trunc('month', CURRENT_DATE)::date
 ),
 overdue_customers AS (
   SELECT DISTINCT
@@ -220,12 +222,14 @@ WITH company_types AS (
 customer_totals AS (
   SELECT COUNT(*)::int AS total_customers
   FROM customers
+  WHERE deactivated = FALSE
 ),
 customers_by_type AS (
   SELECT
     company_type,
     COUNT(*)::int AS customers
   FROM customers
+  WHERE deactivated = FALSE
   GROUP BY company_type
 ),
 customer_months AS (
@@ -251,6 +255,7 @@ customer_months AS (
     date_trunc('month', CURRENT_DATE)::date,
     INTERVAL '1 month'
   ) AS month_date
+  WHERE c.deactivated = FALSE
 ),
 debtor_customers AS (
   SELECT DISTINCT
@@ -342,6 +347,7 @@ customer_months AS (
   FROM months
   JOIN customers c
     ON date_trunc('month', c.billing_started_at)::date <= make_date(sqlc.arg('year')::int, months.month, 1)
+   AND c.deactivated = FALSE
 )
 SELECT
   months.month,

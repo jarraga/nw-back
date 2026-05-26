@@ -8,18 +8,21 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
   created_at
 FROM customers
+WHERE deactivated = FALSE
 ORDER BY id
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
 
 -- name: CountCustomers :one
 SELECT COUNT(*)::int
-FROM customers;
+FROM customers
+WHERE deactivated = FALSE;
 
 -- name: GetCustomer :one
 SELECT
@@ -31,6 +34,7 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -51,6 +55,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -72,6 +77,26 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at;
+
+-- name: UpdateCustomerDeactivated :one
+UPDATE customers
+SET deactivated = sqlc.arg('deactivated')
+WHERE id = sqlc.arg('id')
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -104,6 +129,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -125,6 +151,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -146,6 +173,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -160,6 +188,7 @@ WITH customer_debts AS (
     c.monthly_fee,
     c.billing_started_at,
     c.comments,
+    c.deactivated,
     c.reviewed_at,
     c.reviewed_until,
     c.reviewed_by,
@@ -191,7 +220,8 @@ WITH customer_debts AS (
         ) * INTERVAL '1 day'
       )::date < CURRENT_DATE
   ) overdue_months ON true
-  WHERE (
+  WHERE c.deactivated = FALSE
+    AND (
       cardinality(sqlc.arg('company_types')::text[]) = 0
       OR c.company_type::text = ANY(sqlc.arg('company_types')::text[])
     )
@@ -214,6 +244,7 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -234,7 +265,8 @@ OFFSET sqlc.arg('offset');
 -- name: CountCustomersDebt :one
 SELECT COUNT(*)::int
 FROM customers c
-WHERE (
+WHERE c.deactivated = FALSE
+  AND (
     cardinality(sqlc.arg('company_types')::text[]) = 0
     OR c.company_type::text = ANY(sqlc.arg('company_types')::text[])
   )

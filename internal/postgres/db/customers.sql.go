@@ -27,6 +27,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -45,6 +46,7 @@ func (q *Queries) ClearCustomerReview(ctx context.Context, id int64) (Customer, 
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,
@@ -56,6 +58,7 @@ func (q *Queries) ClearCustomerReview(ctx context.Context, id int64) (Customer, 
 const countCustomers = `-- name: CountCustomers :one
 SELECT COUNT(*)::int
 FROM customers
+WHERE deactivated = FALSE
 `
 
 func (q *Queries) CountCustomers(ctx context.Context) (int32, error) {
@@ -68,7 +71,8 @@ func (q *Queries) CountCustomers(ctx context.Context) (int32, error) {
 const countCustomersDebt = `-- name: CountCustomersDebt :one
 SELECT COUNT(*)::int
 FROM customers c
-WHERE (
+WHERE c.deactivated = FALSE
+  AND (
     cardinality($1::text[]) = 0
     OR c.company_type::text = ANY($1::text[])
   )
@@ -124,6 +128,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -160,6 +165,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,
@@ -178,6 +184,7 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -198,6 +205,7 @@ func (q *Queries) GetCustomer(ctx context.Context, id int64) (Customer, error) {
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,
@@ -216,11 +224,13 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
   created_at
 FROM customers
+WHERE deactivated = FALSE
 ORDER BY id
 LIMIT $2
 OFFSET $1
@@ -249,6 +259,7 @@ func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
 			&i.Comments,
+			&i.Deactivated,
 			&i.ReviewedAt,
 			&i.ReviewedUntil,
 			&i.ReviewedBy,
@@ -273,6 +284,7 @@ WITH customer_debts AS (
     c.monthly_fee,
     c.billing_started_at,
     c.comments,
+    c.deactivated,
     c.reviewed_at,
     c.reviewed_until,
     c.reviewed_by,
@@ -304,7 +316,8 @@ WITH customer_debts AS (
         ) * INTERVAL '1 day'
       )::date < CURRENT_DATE
   ) overdue_months ON true
-  WHERE (
+  WHERE c.deactivated = FALSE
+    AND (
       cardinality($6::text[]) = 0
       OR c.company_type::text = ANY($6::text[])
     )
@@ -327,6 +340,7 @@ SELECT
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -363,6 +377,7 @@ type ListCustomersDebtRow struct {
 	MonthlyFee       int32
 	BillingStartedAt pgtype.Date
 	Comments         string
+	Deactivated      bool
 	ReviewedAt       pgtype.Timestamptz
 	ReviewedUntil    pgtype.Timestamptz
 	ReviewedBy       pgtype.Text
@@ -395,6 +410,7 @@ func (q *Queries) ListCustomersDebt(ctx context.Context, arg ListCustomersDebtPa
 			&i.MonthlyFee,
 			&i.BillingStartedAt,
 			&i.Comments,
+			&i.Deactivated,
 			&i.ReviewedAt,
 			&i.ReviewedUntil,
 			&i.ReviewedBy,
@@ -427,6 +443,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -451,6 +468,7 @@ func (q *Queries) MarkCustomerReviewed(ctx context.Context, arg MarkCustomerRevi
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,
@@ -472,6 +490,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -495,6 +514,7 @@ func (q *Queries) UpdateCustomerComments(ctx context.Context, arg UpdateCustomer
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,
@@ -519,6 +539,7 @@ RETURNING
   monthly_fee,
   billing_started_at,
   comments,
+  deactivated,
   reviewed_at,
   reviewed_until,
   reviewed_by,
@@ -549,6 +570,53 @@ func (q *Queries) UpdateCustomerContact(ctx context.Context, arg UpdateCustomerC
 		&i.MonthlyFee,
 		&i.BillingStartedAt,
 		&i.Comments,
+		&i.Deactivated,
+		&i.ReviewedAt,
+		&i.ReviewedUntil,
+		&i.ReviewedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateCustomerDeactivated = `-- name: UpdateCustomerDeactivated :one
+UPDATE customers
+SET deactivated = $1
+WHERE id = $2
+RETURNING
+  id,
+  company_name,
+  company_type,
+  phone,
+  email,
+  monthly_fee,
+  billing_started_at,
+  comments,
+  deactivated,
+  reviewed_at,
+  reviewed_until,
+  reviewed_by,
+  created_at
+`
+
+type UpdateCustomerDeactivatedParams struct {
+	Deactivated bool
+	ID          int64
+}
+
+func (q *Queries) UpdateCustomerDeactivated(ctx context.Context, arg UpdateCustomerDeactivatedParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, updateCustomerDeactivated, arg.Deactivated, arg.ID)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.CompanyType,
+		&i.Phone,
+		&i.Email,
+		&i.MonthlyFee,
+		&i.BillingStartedAt,
+		&i.Comments,
+		&i.Deactivated,
 		&i.ReviewedAt,
 		&i.ReviewedUntil,
 		&i.ReviewedBy,

@@ -15,6 +15,7 @@ CREATE TABLE customers (
   monthly_fee INT NOT NULL,
   billing_started_at DATE NOT NULL,
   comments TEXT NOT NULL DEFAULT '',
+  deactivated BOOLEAN NOT NULL DEFAULT FALSE,
   reviewed_at TIMESTAMPTZ,
   reviewed_until TIMESTAMPTZ,
   reviewed_by TEXT,
@@ -23,3 +24,7 @@ CREATE TABLE customers (
 
 CREATE INDEX idx_customers_company_name_trgm
 ON customers USING GIN (company_name gin_trgm_ops);
+
+CREATE INDEX idx_customers_active
+ON customers (id)
+WHERE deactivated = FALSE;
