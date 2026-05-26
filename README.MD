@@ -101,11 +101,32 @@ internal/seed/config.go
 make seed
 ```
 
+## Exportar clientes a Excel
+
+El comando de exportacion genera un `.xlsx` con una pestaña por año. Cada pestaña incluye los clientes activos y 12 columnas mensuales. En cada mes aparece solo la fecha de pago si existe; si no hay pago registrado, la celda queda vacia.
+
+```powershell
+make xls
+```
+
+Por defecto guarda el archivo en `exports/`. Tambien se puede indicar una ruta:
+
+```powershell
+make xls OUT=exports/customers.xlsx
+```
+
+El mismo archivo tambien se puede pedir desde la API:
+
+```text
+GET /customers/export/xls
+```
+
 ## Estructura del proyecto
 
 ```text
 cmd/
   api/             Entrada principal de la API HTTP
+  export-xls/      Entrada para exportar clientes y pagos a Excel
   seed/            Entrada para generar y cargar datos fake
 internal/
   handlers/        Handlers HTTP

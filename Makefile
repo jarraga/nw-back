@@ -1,4 +1,4 @@
-.PHONY: dev seed gen
+.PHONY: dev seed gen xls
 
 dev:
 	go run cmd/api/main.go
@@ -8,3 +8,6 @@ seed:
 
 gen:
 	sqlc generate
+
+xls:
+	go run cmd/export-xls/main.go $(if $(OUT),-out $(OUT),)

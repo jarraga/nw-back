@@ -233,6 +233,22 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /customers/export/xls:
+    get:
+      tags: [Customers]
+      summary: Export customers and payments to Excel
+      description: Downloads an XLSX file with one sheet per year, active customers, and monthly payment dates.
+      responses:
+        "200":
+          description: Excel file.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /customers/{customerID}:
     parameters:
       - $ref: "#/components/parameters/CustomerID"

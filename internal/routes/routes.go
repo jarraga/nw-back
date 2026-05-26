@@ -10,11 +10,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(queries *db.Queries) http.Handler {
+func NewRouter(queries *db.Queries, pool *pgxpool.Pool) http.Handler {
 	router := chi.NewRouter()
-	customersHandler := customers.NewHandler(queries)
+	customersHandler := customers.NewHandler(queries, pool)
 	presenceHub := presence.NewHub()
 
 	router.Use(cors.Handler(cors.Options{
@@ -39,6 +40,7 @@ func NewRouter(queries *db.Queries) http.Handler {
 	router.Get("/customers/monthly-delinquency", customersHandler.MonthlyDelinquency)
 	router.Get("/customers/metrics", customersHandler.Metrics)
 	router.Get("/customers/reviewed-debtors-percentage", customersHandler.ReviewedDebtorsPercentage)
+	router.Get("/customers/export/xls", customersHandler.ExportXLS)
 	router.Get("/customers/{customerID:[0-9]+}", customersHandler.Detail)
 	router.Patch("/customers/{customerID:[0-9]+}", customersHandler.Update)
 	router.Patch("/customers/{customerID:[0-9]+}/deactivated", customersHandler.UpdateDeactivated)

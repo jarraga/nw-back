@@ -28,7 +28,7 @@ func main() {
 	defer postgres.Close()
 
 	queries := db.New(postgres.DB)
-	router := routes.NewRouter(queries)
+	router := routes.NewRouter(queries, postgres.DB)
 
 	addr := ":" + envPort()
 	log.Printf("northwind backend listening on %s", addr)
