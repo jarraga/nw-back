@@ -97,6 +97,7 @@ Respuesta esperada:
 ## Generar datos fake
 
 El comando de seed vive en `cmd/seed`. Ahi va todo lo relacionado con generacion de datos fake y carga inicial en la base de datos.
+Al correrlo, borra las tablas actuales, vuelve a aplicar migraciones y carga datos demo.
 
 La configuracion del seed esta en:
 
@@ -106,6 +107,12 @@ internal/seed/config.go
 
 ```powershell
 make seed
+```
+
+La API tambien expone un endpoint para reiniciar los datos demo desde el front:
+
+```text
+POST /admin/reset-demo-data
 ```
 
 ## Exportar clientes a Excel

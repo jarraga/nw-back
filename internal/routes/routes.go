@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nw-back/internal/handlers"
+	"nw-back/internal/handlers/admin"
 	"nw-back/internal/handlers/customers"
 	"nw-back/internal/handlers/presence"
 	"nw-back/internal/postgres/db"
@@ -15,6 +16,7 @@ import (
 
 func NewRouter(queries *db.Queries, pool *pgxpool.Pool) http.Handler {
 	router := chi.NewRouter()
+	adminHandler := admin.NewHandler()
 	customersHandler := customers.NewHandler(queries, pool)
 	presenceHub := presence.NewHub()
 
@@ -31,6 +33,7 @@ func NewRouter(queries *db.Queries, pool *pgxpool.Pool) http.Handler {
 	}))
 
 	router.Get("/", handlers.Home())
+	router.Post("/admin/reset-demo-data", adminHandler.ResetDemoData)
 	router.Get("/ws/customer-viewers", presenceHub.Handle)
 	router.Get("/customers", customersHandler.List)
 	router.Post("/customers", customersHandler.Create)

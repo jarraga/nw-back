@@ -2,14 +2,10 @@ package seed
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"sort"
 
+	"nw-back/internal/migrate"
 	"nw-back/internal/postgres"
 )
-
-const schemaPath = "internal/postgres/schema/*.sql"
 
 func resetDatabase(ctx context.Context) error {
 	err := dropDatabase(ctx)
@@ -17,7 +13,7 @@ func resetDatabase(ctx context.Context) error {
 		return err
 	}
 
-	err = createDatabase(ctx)
+	err = migrate.Up(ctx)
 	if err != nil {
 		return err
 	}
@@ -30,35 +26,13 @@ func dropDatabase(ctx context.Context) error {
 		DROP TABLE IF EXISTS customer_actions;
 		DROP TABLE IF EXISTS customer_payments;
 		DROP TABLE IF EXISTS customers;
+		DROP TABLE IF EXISTS goose_db_version;
 		DROP TYPE IF EXISTS customer_action_type;
 		DROP TYPE IF EXISTS payment_status;
 		DROP TYPE IF EXISTS company_type;
 	`)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func createDatabase(ctx context.Context) error {
-	files, err := filepath.Glob(schemaPath)
-	if err != nil {
-		return err
-	}
-
-	sort.Strings(files)
-
-	for _, file := range files {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			return err
-		}
-
-		_, err = postgres.DB.Exec(ctx, string(content))
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

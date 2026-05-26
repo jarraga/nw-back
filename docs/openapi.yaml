@@ -8,6 +8,7 @@ servers:
     description: Local development
 tags:
   - name: Health
+  - name: Admin
   - name: Customers
   - name: Debt
   - name: Metrics
@@ -38,6 +39,33 @@ paths:
       responses:
         "101":
           description: Switching protocols.
+
+  /admin/reset-demo-data:
+    post:
+      tags: [Admin]
+      summary: Reset demo data
+      description: Drops demo tables, runs migrations, and recreates the demo dataset.
+      responses:
+        "200":
+          description: Demo data reset.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+              example:
+                ok: true
+        "409":
+          description: Reset is already running.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /customers:
     get:
