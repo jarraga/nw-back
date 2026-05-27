@@ -115,6 +115,20 @@ La API tambien expone un endpoint para reiniciar los datos demo desde el front:
 POST /admin/reset-demo-data
 ```
 
+Para borrar todos los datos y dejar la base vacia con estructura creada:
+
+```text
+POST /admin/reset-data
+```
+
+Tambien se puede reemplazar la base con un Excel del mismo formato que genera la exportacion:
+
+```text
+POST /admin/import-xls
+```
+
+El archivo se envia como `multipart/form-data` en el campo `file`.
+
 ## Exportar clientes a Excel
 
 El comando de exportacion genera un `.xlsx` con una pestaña por año. Cada pestaña incluye los clientes activos y 12 columnas mensuales. En cada mes aparece solo la fecha de pago si existe; si no hay pago registrado, la celda queda vacia.

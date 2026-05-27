@@ -16,7 +16,7 @@ import (
 
 func NewRouter(queries *db.Queries, pool *pgxpool.Pool) http.Handler {
 	router := chi.NewRouter()
-	adminHandler := admin.NewHandler()
+	adminHandler := admin.NewHandler(pool)
 	customersHandler := customers.NewHandler(queries, pool)
 	presenceHub := presence.NewHub()
 
@@ -33,7 +33,9 @@ func NewRouter(queries *db.Queries, pool *pgxpool.Pool) http.Handler {
 	}))
 
 	router.Get("/", handlers.Home())
+	router.Post("/admin/reset-data", adminHandler.ResetData)
 	router.Post("/admin/reset-demo-data", adminHandler.ResetDemoData)
+	router.Post("/admin/import-xls", adminHandler.ImportXLS)
 	router.Get("/ws/customer-viewers", presenceHub.Handle)
 	router.Get("/customers", customersHandler.List)
 	router.Post("/customers", customersHandler.Create)
