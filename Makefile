@@ -1,4 +1,4 @@
-.PHONY: dev migrate seed gen xls
+.PHONY: dev migrate seed gen xls docker-build docker-run
 
 dev:
 	go run ./cmd/migrate up && go run ./cmd/api
@@ -14,3 +14,9 @@ gen:
 
 xls:
 	go run ./cmd/export-xls $(if $(OUT),-out $(OUT),)
+
+docker-build:
+	docker build -t nw-back .
+
+docker-run:
+	docker run --rm --env-file .env -p 8080:8080 nw-back
