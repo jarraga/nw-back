@@ -192,9 +192,3 @@ Cuando existan archivos SQL en `schema` y `queries`, generar el codigo con:
 ```powershell
 make gen
 ```
-
-## Verificar el proyecto
-
-```powershell
-go test ./...
-```
