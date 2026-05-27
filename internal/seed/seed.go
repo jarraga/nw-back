@@ -30,12 +30,12 @@ func Run(ctx context.Context) error {
 
 	queries := db.New(postgres.DB)
 
-	customers, err := createCustomers(ctx, queries, config)
+	customers, err := createCustomers(ctx, config)
 	if err != nil {
 		return err
 	}
 
-	err = createCustomerPayments(ctx, queries, customers, config)
+	err = createCustomerPayments(ctx, customers, config)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func Run(ctx context.Context) error {
 		return err
 	}
 
-	err = createCustomerActions(ctx, queries, customers)
+	err = createCustomerActions(ctx, customers)
 	if err != nil {
 		return err
 	}
@@ -53,22 +53,36 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func createCustomers(ctx context.Context, queries *db.Queries, config Config) ([]db.Customer, error) {
+func createCustomers(ctx context.Context, config Config) ([]db.Customer, error) {
 	gofakeit.Seed(0)
 	customers := make([]db.Customer, 0, config.ActiveCustomers)
 
-	for range config.ActiveCustomers {
-		customer, err := randomCustomer(config)
+	for index := range config.ActiveCustomers {
+		params, err := randomCustomer(config)
 		if err != nil {
 			return nil, err
 		}
 
-		createdCustomer, err := queries.CreateCustomer(ctx, customer)
-		if err != nil {
-			return nil, err
-		}
+		customers = append(customers, db.Customer{
+			ID:               int64(index + 1),
+			CompanyName:      params.CompanyName,
+			CompanyType:      params.CompanyType,
+			Phone:            params.Phone,
+			Email:            params.Email,
+			MonthlyFee:       params.MonthlyFee,
+			BillingStartedAt: params.BillingStartedAt,
+			Comments:         params.Comments,
+		})
+	}
 
-		customers = append(customers, createdCustomer)
+	err := copyCustomers(ctx, customers)
+	if err != nil {
+		return nil, err
+	}
+
+	err = resetCustomerSequence(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Printf("%d customers created", config.ActiveCustomers)

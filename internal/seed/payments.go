@@ -12,12 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func createCustomerPayments(ctx context.Context, queries *db.Queries, customers []db.Customer, config Config) error {
+func createCustomerPayments(ctx context.Context, customers []db.Customer, config Config) error {
 	dataTo := dataToMonth()
 	now := time.Now().UTC()
 	debtorStartMonths := randomDebtorStartMonths(customers, config, dataTo, now)
 	latePaymentMonths := randomLatePaymentMonths(customers, config, dataTo, now, debtorStartMonths)
-	paymentsCreated := 0
+	allPayments := []db.CreateCustomerPaymentParams{}
 
 	for _, customer := range customers {
 		dataFrom := monthStart(customer.BillingStartedAt.Time)
@@ -26,17 +26,15 @@ func createCustomerPayments(ctx context.Context, queries *db.Queries, customers 
 			return err
 		}
 
-		for _, payment := range payments {
-			_, err = queries.CreateCustomerPayment(ctx, payment)
-			if err != nil {
-				return err
-			}
-
-			paymentsCreated++
-		}
+		allPayments = append(allPayments, payments...)
 	}
 
-	log.Printf("%d customer payments created", paymentsCreated)
+	err := copyPayments(ctx, allPayments)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("%d customer payments created", len(allPayments))
 	log.Printf("%d customers left with overdue debt", len(debtorStartMonths))
 	return nil
 }

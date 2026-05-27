@@ -11,23 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func createCustomerActions(ctx context.Context, queries *db.Queries, customers []db.Customer) error {
-	actionsCreated := 0
+func createCustomerActions(ctx context.Context, customers []db.Customer) error {
+	actions := []db.CreateCustomerActionParams{}
 
 	for _, customer := range customers {
 		actionsCount := gofakeit.Number(2, 10)
 
 		for range actionsCount {
-			_, err := queries.CreateCustomerAction(ctx, randomCustomerAction(customer))
-			if err != nil {
-				return err
-			}
-
-			actionsCreated++
+			actions = append(actions, randomCustomerAction(customer))
 		}
 	}
 
-	log.Printf("%d customer actions created", actionsCreated)
+	err := copyActions(ctx, actions)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("%d customer actions created", len(actions))
 	return nil
 }
 
